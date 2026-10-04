@@ -9,7 +9,8 @@ abonnementen) geldt overal: geen reclame.
 Download de nieuwste installer (`.msi`) via
 **[Releases](https://github.com/zwollerob/twitch-multiview/releases/latest)**
 en dubbelklik erop. Werkt op Windows 10 en 11 (64-bit), zonder
-beheerdersrechten.
+beheerdersrechten. Wat er per versie is veranderd, staat in de
+[CHANGELOG](CHANGELOG.md).
 
 De installer is niet digitaal ondertekend. Windows SmartScreen toont daarom
 "Windows heeft uw pc beschermd": klik op **Meer info** en daarna op
@@ -80,12 +81,19 @@ het openen "Windows heeft uw pc beschermd". Klik op **Meer info** en daarna op
 
 ### Na een wijziging opnieuw bouwen
 
-Verhoog eerst `version` in `package.json` (bijv. 1.0.1), zodat de nieuwe MSI
-netjes over de oude versie heen installeert. Daarna:
+1. Verhoog `version` in `package.json` (bijv. 1.0.2), zodat de nieuwe MSI
+   netjes over de oude versie heen installeert.
+2. Beschrijf de wijzigingen in [CHANGELOG.md](CHANGELOG.md) onder een nieuw
+   kopje met het versienummer en de datum.
+3. Bouw de MSI:
 
-```powershell
-powershell -ExecutionPolicy Bypass -File "V:\Claud AI\twitch\tools\build-msi.ps1"
-```
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File "V:\Claud AI\twitch\tools\build-msi.ps1"
+   ```
+
+4. Commit en push de wijzigingen, en maak op GitHub een nieuwe Release aan
+   met de MSI uit `dist\`. Zet in de release-notes de SHA-256
+   (`Get-FileHash .\dist\Twitch-MultiView-Setup-<versie>.msi`).
 
 Het bouwen gebeurt in een tijdelijke map op C:. Het programma kan niet vanaf
 de NAS draaien, omdat de beveiligings-sandbox van Chromium niet start vanaf
@@ -113,5 +121,6 @@ een netwerkschijf. Je login en instellingen blijven bij een update bewaard
 - `renderer/`: de interface (layouts, spelers, chat)
 - `build/`: icoon (gemaakt met `tools/make-icon.js`)
 - `tools/build-msi.ps1`: bouwt de MSI-installer naar `dist/`
+- `CHANGELOG.md`: wat er per versie is gewijzigd
 
 Made with AI · Zw_038_olle
