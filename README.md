@@ -92,6 +92,20 @@ de NAS draaien, omdat de beveiligings-sandbox van Chromium niet start vanaf
 een netwerkschijf. Je login en instellingen blijven bij een update bewaard
 (die staan in `%APPDATA%\Twitch MultiView`).
 
+## Veiligheid
+
+- De interface draait afgeschermd van je pc (sandbox, context isolation,
+  geen Node.js in pagina's) en kan nergens anders heen navigeren.
+- Twitch-pagina's mogen alleen volledig scherm en kopiëren; geen camera,
+  microfoon, locatie of meldingen.
+- Je Twitch-login wordt versleuteld opgeslagen (Windows DPAPI) en gaat
+  alleen naar Twitch.
+- Links uit chat of speler openen alleen als gewone weblink in je browser.
+- De Electron-binary is dichtgezet (geen `RunAsNode`, `NODE_OPTIONS` of
+  `--inspect`; de app-code wordt bij het starten op wijzigingen gecontroleerd).
+- Controleer je download met de SHA-256 uit de release-notes:
+  `Get-FileHash .\Twitch-MultiView-Setup-<versie>.msi`
+
 ## Bestanden
 
 - `main.js`: hoofdproces (venster, Twitch-sessie, login, sneltoetsen)

@@ -12,7 +12,6 @@ contextBridge.exposeInMainWorld('api', {
   followedLive: () => ipcRenderer.invoke('twitch:followed'),
   setFullscreen: on => ipcRenderer.invoke('window:fullscreen', on),
   isFullscreen: () => ipcRenderer.invoke('window:isFullscreen'),
-  openExternal: url => ipcRenderer.invoke('shell:open', url),
   args: () => ipcRenderer.invoke('app:args'),
   onAuthChanged: cb => ipcRenderer.on('auth-changed', () => cb()),
   onShortcut: cb => ipcRenderer.on('shortcut', (e, key) => cb(key)),
