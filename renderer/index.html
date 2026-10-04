@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; img-src 'self' https://static-cdn.jtvnw.net data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>Twitch MultiView</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header id="bar">
+    <div class="brand" title="Twitch MultiView">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M4.3 2 3 5.4v13.8h4.7V22h2.6l2.7-2.8h3.9L22 14V2H4.3Zm15.9 11.2-3 3h-4.7l-2.6 2.6v-2.6H5.8V3.7h14.4v9.5Zm-3-6.1v5.3h-1.7V7.1h1.7Zm-4.6 0v5.3h-1.7V7.1h1.7Z"/></svg>
+      <span>MultiView</span>
+    </div>
+
+    <form id="addForm" autocomplete="off">
+      <input id="addInput" type="text" spellcheck="false" placeholder="Kanaal toevoegen…" title="Kanaalnaam of twitch.tv-link (meerdere kan, gescheiden door spaties)">
+      <button type="submit" class="btn icon" title="Toevoegen">+</button>
+    </form>
+    <button id="followedBtn" class="btn" title="Je gevolgde kanalen die nu live zijn">Live gevolgd ▾</button>
+
+    <div id="chips"></div>
+
+    <div class="seg" id="layoutSeg" title="Layout (L)">
+      <button data-layout="featured" title="Eén groot, de rest klein (U)">Uitgelicht</button>
+      <button data-layout="grid" title="Alles even groot (G)">Raster</button>
+      <button data-layout="solo" title="Alleen de uitgelichte stream (S)">Solo</button>
+    </div>
+    <button id="audioBtn" class="btn" title="Welke streams geluid geven (M = alles dempen)"></button>
+    <button id="chatBtn" class="btn" title="Chat van de uitgelichte stream (C)">Chat</button>
+    <div id="account"></div>
+    <button id="helpBtn" class="btn icon" title="Sneltoetsen (?)">?</button>
+    <button id="fsBtn" class="btn icon" title="Volledig scherm (F / F11)"></button>
+  </header>
+
+  <main id="main">
+    <div id="stage">
+      <div id="empty">
+        <h1>Twitch MultiView</h1>
+        <p>Voeg hierboven een kanaal toe, of kies uit je gevolgde kanalen die nu live zijn.</p>
+        <div id="emptyAccount"></div>
+        <ul class="keys">
+          <li><kbd>1</kbd>–<kbd>9</kbd> stream uitlichten</li>
+          <li><kbd>F</kbd> volledig scherm</li>
+          <li><kbd>L</kbd> layout wisselen</li>
+          <li><kbd>C</kbd> chat</li>
+        </ul>
+      </div>
+    </div>
+    <aside id="chatPanel">
+      <div class="chat-head">
+        <span id="chatTitle">Chat</span>
+        <button id="chatClose" class="btn icon small" title="Chat sluiten (C)">✕</button>
+      </div>
+      <div id="chatHost"></div>
+    </aside>
+  </main>
+
+  <div id="followedMenu" class="popover" hidden></div>
+  <div id="accountMenu" class="popover" hidden></div>
+
+  <div id="help" class="modal" hidden>
+    <div class="modal-card">
+      <h2>Sneltoetsen</h2>
+      <table>
+        <tr><td><kbd>F</kbd> / <kbd>F11</kbd></td><td>Volledig scherm aan/uit</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>Volledig scherm verlaten</td></tr>
+        <tr><td><kbd>1</kbd>–<kbd>9</kbd></td><td>Stream 1–9 uitlichten</td></tr>
+        <tr><td><kbd>←</kbd> <kbd>→</kbd> / <kbd>N</kbd></td><td>Vorige / volgende stream uitlichten</td></tr>
+        <tr><td><kbd>L</kbd></td><td>Layout wisselen (Uitgelicht → Raster → Solo)</td></tr>
+        <tr><td><kbd>U</kbd> <kbd>G</kbd> <kbd>S</kbd></td><td>Uitgelicht / Raster / Solo</td></tr>
+        <tr><td><kbd>C</kbd></td><td>Chat van uitgelichte stream</td></tr>
+        <tr><td><kbd>M</kbd></td><td>Alles dempen aan/uit</td></tr>
+        <tr><td><kbd>H</kbd></td><td>Menubalk automatisch verbergen</td></tr>
+        <tr><td><kbd>R</kbd></td><td>Uitgelichte stream herladen</td></tr>
+        <tr><td>Dubbelklik op video</td><td>Die stream solo + volledig scherm (nogmaals: terug)</td></tr>
+        <tr><td>Klik op kleine stream</td><td>Uitlichten</td></tr>
+        <tr><td>Kanaal-chips slepen</td><td>Volgorde aanpassen</td></tr>
+      </table>
+      <p class="muted">Geluid komt standaard alleen van de uitgelichte stream. Met de luidspreker op een stream kun je dat per stream aanpassen.</p>
+      <div class="modal-foot">
+        <button class="btn primary" id="helpClose">Sluiten</button>
+        <span class="credit">Made with AI · <b>Zw_038_olle</b> <span id="appVersion"></span></span>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+{
+  "name": "twitch-multiview",
+  "version": "1.0.0",
+  "description": "Meerdere Twitch-streams tegelijk, ingelogd (Turbo = geen reclame)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build-msi": "powershell -ExecutionPolicy Bypass -File tools/build-msi.ps1"
+  },
+  "author": "Zw_038_olle",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3"
+  },
+  "productName": "Twitch MultiView",
+  "build": {
+    "appId": "nl.zw038olle.twitchmultiview",
+    "productName": "Twitch MultiView",
+    "copyright": "Made with AI - Zw_038_olle",
+    "artifactName": "Twitch-MultiView-Setup-${version}.${ext}",
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**",
+      "build/icon.png",
+      "package.json"
+    ],
+    "directories": {
+      "buildResources": "build"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "msi",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "msi": {
+      "oneClick": false,
+      "perMachine": false,
+      "runAfterFinish": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Twitch MultiView",
+      "upgradeCode": "3466C819-E718-46F8-BA30-47C9AADD44A4"
+    }
+  }
+}
