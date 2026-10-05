@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, Menu, desktopCapturer, ipcMain, protocol, session, shell } = require('electron');
+const { app, BrowserWindow, Menu, desktopCapturer, ipcMain, protocol, screen, session, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -74,6 +74,9 @@ function fromUi(event) {
 }
 
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+// A covered window must keep painting and playing: streams should not pause
+// behind other windows, and casting records the window itself.
+app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
 app.userAgentFallback = CHROME_UA;
 
 const CONFIG_FILE = () => path.join(app.getPath('userData'), 'multiview-config.json');
@@ -300,6 +303,88 @@ function setFullscreen(on) {
   mainWin.setFullScreen(on);
 }
 
+// --- Casting to a TV ------------------------------------------------------------
+const { discoverDevices, CastClient, StreamServer } = require('./cast');
+
+const cast = { devices: [], client: null, server: null, device: null, muteLocal: true };
+
+function sendCastState(status, message = '') {
+  if (mainWin && !mainWin.isDestroyed()) {
+    mainWin.webContents.send('cast:state', { status, message, device: cast.device && { id: cast.device.id, name: cast.device.name, model: cast.device.model } });
+  }
+}
+
+async function castDiscover() {
+  cast.devices = await discoverDevices();
+  return cast.devices;
+}
+
+async function castStop(reason) {
+  const { client, server } = cast;
+  cast.client = null;
+  cast.server = null;
+  if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.send('cast:recorder', 'stop');
+  if (server) server.stop();
+  if (client) await client.stop();
+  if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.setBackgroundThrottling(true);
+  sendCastState('stopped', reason || '');
+  cast.device = null;
+}
+
+async function castStart(deviceId) {
+  const device = cast.devices.find(d => d.id === deviceId);
+  if (!device) throw new Error('Apparaat niet gevonden, zoek opnieuw');
+  if (cast.client) await castStop();
+  cast.device = device;
+  sendCastState('connecting');
+  // Keep painting while other windows cover the app, otherwise the TV freezes.
+  mainWin.webContents.setBackgroundThrottling(false);
+  const server = new StreamServer();
+  const client = new CastClient(device);
+  cast.server = server;
+  cast.client = client;
+  try {
+    // Every new connection from the TV gets a freshly started recording.
+    server.on('client', () => mainWin.webContents.send('cast:recorder', 'start'));
+    const url = await server.start(device.ip);
+    client.on('ended', reason => { if (cast.client === client) castStop(reason); });
+    client.on('close', () => { if (cast.client === client) castStop('Verbinding met het apparaat verbroken'); });
+    client.on('error', () => {});
+    client.on('media', state => { if (cast.client === client && state === 'PLAYING') sendCastState('casting'); });
+    await client.connect();
+    await client.launch();
+    await client.load(url, mainWin.getTitle());
+    sendCastState('casting');
+  } catch (err) {
+    await castStop();
+    sendCastState('error', err.message);
+  }
+}
+
+// --- Other screens (HDMI TV, Miracast in "Extend" mode) ------------------------
+function listDisplays() {
+  const current = screen.getDisplayMatching(mainWin.getBounds()).id;
+  return screen.getAllDisplays().map((d, i) => ({
+    id: d.id,
+    label: d.label || `Scherm ${i + 1}`,
+    width: d.size.width,
+    height: d.size.height,
+    primary: d.id === screen.getPrimaryDisplay().id,
+    current: d.id === current,
+  }));
+}
+
+function moveToDisplay(id) {
+  const d = screen.getAllDisplays().find(x => x.id === id);
+  if (!d) return;
+  const wasFull = mainWin.isFullScreen();
+  if (wasFull) mainWin.setFullScreen(false);
+  setTimeout(() => {
+    mainWin.setBounds({ x: d.workArea.x + 40, y: d.workArea.y + 40, width: Math.min(1600, d.workArea.width - 80), height: Math.min(900, d.workArea.height - 80) });
+    mainWin.setFullScreen(true);
+  }, wasFull ? 400 : 0);
+}
+
 // --- Keyboard shortcuts while focus is inside a player ---------------------
 // Keys pressed inside a <webview> never reach the host page, so they are
 // intercepted here and forwarded to the UI.
@@ -401,6 +486,7 @@ function createWindow() {
     webPreferences.contextIsolation = true;
     webPreferences.sandbox = true;
     webPreferences.autoplayPolicy = 'no-user-gesture-required';
+    webPreferences.backgroundThrottling = false;
     const src = parseUrl(params.src);
     const ok = mainWin.webContents.getURL() === UI_URL && src && src.protocol === 'https:'
       && (src.hostname === 'player.twitch.tv' || src.hostname === 'www.twitch.tv');
@@ -466,9 +552,26 @@ app.whenReady().then(() => {
   ses.setPermissionRequestHandler((wc, permission, cb, details) =>
     cb(twitchPermissionAllowed(permission, details.requestingUrl || wc.getURL())));
   ses.setPermissionCheckHandler((wc, permission, origin) => twitchPermissionAllowed(permission, origin));
-  // Our own UI needs no permissions at all (Electron's default is "allow").
-  session.defaultSession.setPermissionRequestHandler((wc, permission, cb) => cb(false));
-  session.defaultSession.setPermissionCheckHandler(() => false);
+  // Our own UI only needs screen capture, for casting its own window.
+  // Everything else is refused (Electron's default is "allow").
+  const isUi = wc => Boolean(mainWin) && wc === mainWin.webContents && wc.getURL() === UI_URL;
+  session.defaultSession.setPermissionRequestHandler((wc, permission, cb) => cb(isUi(wc) && ['display-capture', 'media'].includes(permission)));
+  session.defaultSession.setPermissionCheckHandler((wc, permission) => isUi(wc) && ['display-capture', 'media'].includes(permission));
+  // getDisplayMedia() from the UI always captures the app's own window (never
+  // the rest of the screen), plus the PC's sound.
+  // (Window capture, because a capture of the page alone misses the stream
+  // players, which are separate webviews.)
+  session.defaultSession.setDisplayMediaRequestHandler(async (request, callback) => {
+    if (!mainWin || request.frame !== mainWin.webContents.mainFrame) return callback({});
+    try {
+      const sources = await desktopCapturer.getSources({ types: ['window'], thumbnailSize: { width: 0, height: 0 } });
+      const own = sources.find(s => s.id === mainWin.getMediaSourceId());
+      if (!own) return callback({});
+      callback({ video: own, audio: cast.muteLocal ? 'loopbackWithMute' : 'loopback' });
+    } catch {
+      callback({});
+    }
+  });
 
   ses.cookies.on('changed', (e, cookie) => {
     if (cookie.name !== 'auth-token') return;
@@ -507,6 +610,18 @@ app.whenReady().then(() => {
   handle('twitch:search', text => (typeof text === 'string' && text.trim().length >= 2 && text.length <= 50 ? searchChannels(text.trim()) : []));
   handle('window:fullscreen', on => setFullscreen(typeof on === 'boolean' ? on : !mainWin.isFullScreen()));
   handle('window:isFullscreen', () => mainWin.isFullScreen());
+  handle('cast:discover', () => castDiscover());
+  handle('cast:prepare', muteLocal => { cast.muteLocal = muteLocal !== false; });
+  handle('cast:start', deviceId => (typeof deviceId === 'string' ? castStart(deviceId) : null));
+  handle('cast:stop', () => castStop());
+  handle('screen:list', () => listDisplays());
+  handle('screen:move', id => (typeof id === 'number' ? moveToDisplay(id) : null));
+  handle('screen:miracast', () => shell.openExternal('ms-settings-connectabledevices:devicediscovery'));
+  handle('cast:feedback', () => shell.openExternal(`https://github.com/zwollerob/twitch-multiview/issues/new?template=cast-feedback.yml&title=${encodeURIComponent(`Cast-feedback (v${app.getVersion()})`)}`));
+  ipcMain.on('cast:chunk', (event, chunk) => {
+    if (fromUi(event) && cast.server && chunk instanceof ArrayBuffer) cast.server.write(Buffer.from(chunk));
+  });
+
   handle('app:args', () => ({
     channels: arg('channels'),
     layout: arg('layout'),
@@ -524,3 +639,12 @@ app.on('second-instance', () => {
 });
 
 app.on('window-all-closed', () => app.quit());
+
+// Stop casting before quitting, so the TV does not keep a frozen picture.
+let quittingAfterCast = false;
+app.on('before-quit', event => {
+  if (!cast.client || quittingAfterCast) return;
+  event.preventDefault();
+  quittingAfterCast = true;
+  Promise.race([castStop(), new Promise(r => setTimeout(r, 2000))]).finally(() => app.quit());
+});

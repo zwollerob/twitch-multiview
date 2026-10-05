@@ -38,6 +38,10 @@ Daarna staat bij je naam een **Turbo**-badge. Je login blijft bewaard.
   *Geluid: …* wisselt tussen *uitgelicht*, *alle* en *uit*. Met de
   luidspreker op een stream zet je die apart aan of uit.
 - **Chat**: toont de chat van de uitgelichte stream.
+- **Op tv tonen** (bèta, in het accountmenu): cast de hele app naar een
+  Chromecast, Nvidia Shield of Google TV, of zet hem volledig scherm op een
+  ander scherm. De eerste keer vraagt Windows Firewall om toestemming: kies
+  "Toestaan", anders kan de tv de stream niet ophalen.
 - **Dubbelklik op een video**: die stream solo en volledig scherm.
   Nogmaals dubbelklikken (of Esc) brengt je terug.
 - Kanalen bovenin kun je **slepen** om de volgorde te veranderen;

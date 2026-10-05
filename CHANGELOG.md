@@ -6,6 +6,41 @@ versienummers volgens [Semantic Versioning](https://semver.org/lang/nl/):
 `MAJOR.MINOR.PATCH`, waarbij PATCH voor fixes is, MINOR voor nieuwe functies
 en MAJOR voor grote, niet-compatibele wijzigingen.
 
+## [1.3.0-beta.1] - 2026-10-05 (bèta)
+
+Bèta-versie: de nieuwe castfunctie wordt eerst door een kleinere groep
+getest. Op GitHub staat hij als pre-release; de stabiele versie blijft 1.2.0.
+
+### Toegevoegd
+- **Op tv tonen (bèta)** in het accountmenu:
+  - **Google Cast:** de hele app naar een Chromecast, Nvidia Shield of tv met
+    Google TV casten. De app zoekt de apparaten zelf in je netwerk. Je pc
+    blijft al het werk doen (alle streams, je login en Turbo); de tv krijgt
+    één live videostream van het app-venster (1080p, 8 Mbit/s, met geluid,
+    een paar seconden vertraging). Standaard klinkt het geluid alleen op de tv.
+  - **Ander scherm:** de app met één klik volledig scherm op een andere
+    monitor of een tv via HDMI zetten, en een knop om een draadloos scherm
+    (Miracast) te koppelen via Windows.
+  - Tijdens het casten staat een paarse knop met de apparaatnaam in de
+    bovenbalk; bij afsluiten van de app stopt het casten netjes.
+- Knop **Feedback geven** in het castvenster, met een feedbackformulier op
+  GitHub.
+
+### Gewijzigd
+- Streams blijven nu doorspelen als er een ander venster over de app ligt.
+
+### Technisch
+- Cast-protocol (CASTV2) zelf geïmplementeerd in `cast.js`; apparaten zoeken
+  via mDNS met `multicast-dns` (nieuwe afhankelijkheid). Afspelen gebeurt met
+  Google's standaard "Default Media Receiver", dus zonder registratie.
+- Het venster wordt opgenomen met de vensteropname van Windows (de
+  tab-opname nam de spelers, die aparte webviews zijn, niet mee) en via
+  `MediaRecorder` als live WebM (VP8 + Opus) aangeboden.
+- De stream staat alleen tijdens het casten online, op een geheime URL
+  (48 tekens willekeurig), en alleen op de netwerkkaart die de tv bereikt.
+- Schermopname is alleen toegestaan voor de eigen interface en neemt altijd
+  alleen het eigen app-venster op.
+
 ## [1.2.0] - 2026-10-05
 
 ### Toegevoegd
@@ -143,6 +178,7 @@ Eerste versie.
   op het bureaublad en in het Startmenu.
 - "Made with AI · Zw_038_olle" en versienummer in het sneltoetsenvenster.
 
+[1.3.0-beta.1]: https://github.com/zwollerob/twitch-multiview/compare/v1.2.0...v1.3.0-beta.1
 [1.2.0]: https://github.com/zwollerob/twitch-multiview/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/zwollerob/twitch-multiview/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/zwollerob/twitch-multiview/compare/v1.0.1...v1.0.2

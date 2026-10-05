@@ -10,6 +10,11 @@ const MAX_OPTIONS = [16, 24, 32, 48]; // above 16 only "at your own risk", see o
 const INFO_REFRESH_MS = 60_000;
 
 const ICONS = {
+  cast: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M21 3H3a2 2 0 0 0-2 2v3h2V5h18v14h-7v2h7a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM1 18v3h3a3 3 0 0 0-3-3zm0-4v2a5 5 0 0 1 5 5h2a7 7 0 0 0-7-7zm0-4v2a9 9 0 0 1 9 9h2A11 11 0 0 0 1 10z"/></svg>',
+  dongle: '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path fill="currentColor" d="M11 2h2v5h-2z"/><circle cx="12" cy="13" r="2" fill="currentColor"/></svg>',
+  tvbox: '<svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M4 9 12 4l8 5-8 5z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M4 9v6l8 5 8-5V9"/></svg>',
+  tv: '<svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path fill="currentColor" d="M8 19h8v2H8z"/></svg>',
+  monitor: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><path fill="currentColor" d="M10 16h4v3h3v2H7v-2h3z"/></svg>',
   warn: '<svg class="tri" viewBox="0 0 24 24"><path fill="#ffc400" stroke="#2a1f00" stroke-width="1" stroke-linejoin="round" d="M12 2.5 23 21.5H1z"/><path fill="#2a1f00" d="M10.9 8.6h2.2l-.35 7h-1.5zM12 17.1a1.3 1.3 0 1 1 0 2.6 1.3 1.3 0 0 1 0-2.6z"/></svg>',
   star: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="m12 2.5 2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"/></svg>',
   vol: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg>',
@@ -855,11 +860,13 @@ function toggleAccountMenu() {
   closePopovers();
   accountMenu.innerHTML = `
     <div class="hint">Ingelogd als <b>${esc(user.displayName || user.login)}</b></div>
+    <button class="item cast-item" data-act="cast">${ICONS.cast}<span>Op tv tonen</span><span class="beta-tag">Beta</span>${castState.status === 'casting' ? `<span class="cast-tag">● ${esc(castState.device ? castState.device.name : 'tv')}</span>` : ''}</button>
     <button class="item" data-act="reload">Alle streams herladen</button>
     <button class="item risk-item" data-act="limit">${ICONS.warn}<span>Max. aantal streams: <b>${state.maxStreams}</b></span>${state.maxStreams > DEFAULT_MAX ? '<span class="risk-tag">eigen risico</span>' : ''}</button>
     <button class="item" data-act="logout">Uitloggen</button>`;
   accountMenu.querySelector('[data-act=reload]').addEventListener('click', () => { closePopovers(); reloadAll(); });
   accountMenu.querySelector('[data-act=limit]').addEventListener('click', () => { closePopovers(); openLimitDialog(); });
+  accountMenu.querySelector('[data-act=cast]').addEventListener('click', () => { closePopovers(); openCastDialog(); });
   accountMenu.querySelector('[data-act=logout]').addEventListener('click', () => { closePopovers(); api.logout(); });
   accountMenu.hidden = false;
   const r = $('#account').getBoundingClientRect();
@@ -914,6 +921,158 @@ function openLimitDialog() {
   modal.hidden = false;
 }
 
+// ---------------------------------------------------------------------------
+// Casting to a TV
+// ---------------------------------------------------------------------------
+const castModal = $('#castModal');
+let castState = { status: 'stopped', device: null, message: '' };
+let castDevices = [];
+let castSearching = false;
+let castMedia = null; // captured window + sound
+let castRecorder = null;
+let castChain = Promise.resolve();
+
+function deviceIcon(d) {
+  const m = `${d.model} ${d.name}`.toLowerCase();
+  if (/shield|google tv|android tv|box/.test(m)) return ICONS.tvbox;
+  if (/chromecast/.test(m)) return ICONS.dongle;
+  return ICONS.tv;
+}
+
+function renderCastDevices() {
+  const host = $('#castDevices');
+  if (castSearching && !castDevices.length) {
+    host.innerHTML = '<div class="cast-empty"><span class="spinner"></span>Zoeken naar Chromecast, Shield en andere Cast-apparaten…</div>';
+    return;
+  }
+  if (!castDevices.length) {
+    host.innerHTML = `<div class="cast-empty">Geen apparaten gevonden.<br><span class="muted">Staat de tv of Shield aan en zit hij op hetzelfde netwerk? Een VPN kan het zoeken blokkeren.</span></div>`;
+    return;
+  }
+  host.innerHTML = '';
+  for (const d of castDevices) {
+    const active = castState.device && castState.device.id === d.id;
+    const status = active ? castState.status : 'idle';
+    const card = document.createElement('div');
+    card.className = `cast-device ${status}`;
+    card.innerHTML = `
+      <div class="dev-icon">${deviceIcon(d)}</div>
+      <div class="dev-meta"><b>${esc(d.name)}</b><span>${esc(d.model || 'Cast-apparaat')}</span></div>
+      <div class="dev-action">${
+        status === 'connecting' ? '<span class="spinner"></span>Verbinden…'
+          : status === 'casting' ? '<span class="live-dot"></span>Bezig <button class="btn stop">Stoppen</button>'
+            : '<button class="btn primary go">Casten</button>'}</div>`;
+    const go = card.querySelector('.go');
+    if (go) go.addEventListener('click', () => startCast(d));
+    const stop = card.querySelector('.stop');
+    if (stop) stop.addEventListener('click', () => api.castStop());
+    host.appendChild(card);
+  }
+}
+
+async function refreshCastDevices() {
+  castSearching = true;
+  renderCastDevices();
+  try {
+    castDevices = await api.castDiscover();
+  } catch {
+    castDevices = [];
+  }
+  castSearching = false;
+  renderCastDevices();
+}
+
+async function renderScreens() {
+  const host = $('#castScreens');
+  let list = [];
+  try { list = await api.listScreens(); } catch { /* ignore */ }
+  host.innerHTML = '';
+  list.forEach((s, i) => {
+    const row = document.createElement('div');
+    row.className = `cast-screen${s.current ? ' current' : ''}`;
+    row.innerHTML = `
+      <div class="dev-icon">${ICONS.monitor}</div>
+      <div class="dev-meta"><b>${esc(s.label || `Scherm ${i + 1}`)}</b><span>${s.width}×${s.height}${s.primary ? ' · hoofdscherm' : ''}</span></div>
+      <div class="dev-action">${s.current ? '<span class="muted">Hier staat de app</span>' : '<button class="btn">Hier tonen</button>'}</div>`;
+    const b = row.querySelector('button');
+    if (b) b.addEventListener('click', async () => { castModal.hidden = true; await api.moveToScreen(s.id); });
+    host.appendChild(row);
+  });
+}
+
+function openCastDialog() {
+  $('#castHeadIcon').innerHTML = ICONS.cast;
+  castModal.hidden = false;
+  renderCastDevices();
+  if (!castDevices.length || castState.status !== 'casting') refreshCastDevices();
+  renderScreens();
+}
+
+async function startCast(device) {
+  // Screen capture must start right after the click (a user gesture).
+  await api.castPrepare($('#castMute').checked);
+  try {
+    if (castMedia) castMedia.getTracks().forEach(t => t.stop());
+    castMedia = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: { ideal: 30, max: 30 } }, audio: true });
+  } catch (err) {
+    toast(`Opnemen voor casten lukt niet: ${err.message}`);
+    return;
+  }
+  castState = { status: 'connecting', device, message: '' };
+  renderCastDevices();
+  api.castStart(device.id);
+}
+
+function castRecorderStart() {
+  castRecorderStop(false);
+  if (!castMedia) return;
+  const mime = ['video/webm;codecs=vp8,opus', 'video/webm;codecs=vp9,opus', 'video/webm'].find(m => MediaRecorder.isTypeSupported(m));
+  const rec = new MediaRecorder(castMedia, { mimeType: mime, videoBitsPerSecond: 8_000_000, audioBitsPerSecond: 160_000 });
+  rec.ondataavailable = e => {
+    if (rec !== castRecorder || !e.data || !e.data.size) return; // ignore the tail of an old recording
+    const blob = e.data;
+    castChain = castChain.then(() => blob.arrayBuffer()).then(buf => { if (rec === castRecorder) api.castChunk(buf); });
+  };
+  castRecorder = rec;
+  rec.start(250);
+}
+
+function castRecorderStop(release) {
+  const rec = castRecorder;
+  castRecorder = null;
+  if (rec && rec.state !== 'inactive') rec.stop();
+  if (release && castMedia) {
+    castMedia.getTracks().forEach(t => t.stop());
+    castMedia = null;
+  }
+}
+
+api.onCastRecorder(cmd => (cmd === 'start' ? castRecorderStart() : castRecorderStop(true)));
+
+api.onCastState(s => {
+  const before = castState.status;
+  castState = s;
+  if (s.status === 'error') {
+    castRecorderStop(true);
+    toast(`Casten mislukt: ${s.message}`);
+  } else if (s.status === 'stopped' && before !== 'stopped') {
+    toast(s.message ? `Casten gestopt: ${s.message}` : 'Casten gestopt');
+  } else if (s.status === 'casting' && before === 'connecting') {
+    toast(`Bezig met casten naar ${s.device ? s.device.name : 'je tv'}`);
+  }
+  const btn = $('#castBtn');
+  btn.hidden = s.status !== 'casting' && s.status !== 'connecting';
+  btn.innerHTML = `${ICONS.cast}<span>${s.status === 'connecting' ? 'Verbinden…' : esc(s.device ? s.device.name : 'tv')}</span>`;
+  if (!castModal.hidden) renderCastDevices();
+});
+
+$('#castBtn').addEventListener('click', () => openCastDialog());
+$('#castClose').addEventListener('click', () => { castModal.hidden = true; });
+$('#castRefresh').addEventListener('click', () => refreshCastDevices());
+$('#castMiracast').addEventListener('click', () => api.openMiracast());
+$('#castFeedback').addEventListener('click', () => api.castFeedback());
+castModal.addEventListener('click', e => { if (e.target === castModal) castModal.hidden = true; });
+
 function reloadAll() {
   for (const t of tiles.values()) t.wv.reload();
   if (chatWv) chatWv.reload();
@@ -942,7 +1101,7 @@ api.onAuthChanged(async () => {
 // Keyboard shortcuts
 // ---------------------------------------------------------------------------
 function handleShortcut(k) {
-  if (!$('#limitModal').hidden && k !== 'escape') return false; // dialog open
+  if ((!$('#limitModal').hidden || !castModal.hidden) && k !== 'escape') return false; // dialog open
   if (/^[1-9]$/.test(k)) {
     const ch = state.channels[Number(k) - 1];
     if (ch) feature(ch);
@@ -951,7 +1110,8 @@ function handleShortcut(k) {
   switch (k) {
     case 'f': api.setFullscreen(); return true;
     case 'escape':
-      if (!$('#limitModal').hidden) $('#limitModal').hidden = true;
+      if (!castModal.hidden) castModal.hidden = true;
+      else if (!$('#limitModal').hidden) $('#limitModal').hidden = true;
       else if (!$('#help').hidden) toggleHelp(false);
       else if (!followedMenu.hidden || !accountMenu.hidden) closePopovers();
       else if (fullscreen) api.setFullscreen(false);

@@ -1,0 +1,68 @@
+name: Feedback op casten (bèta)
+description: Laat weten hoe "Op tv tonen" werkt op jouw tv
+title: "Cast-feedback"
+labels: ["cast-beta"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Bedankt voor het testen van **Op tv tonen**! Een paar korte vragen helpen om het voor iedereen goed te laten werken.
+  - type: dropdown
+    id: device
+    attributes:
+      label: Naar welk apparaat cast je?
+      options:
+        - Chromecast
+        - Chromecast met Google TV
+        - Nvidia Shield
+        - Tv met Google TV / Android TV ingebouwd
+        - Anders (zie hieronder)
+    validations:
+      required: true
+  - type: dropdown
+    id: works
+    attributes:
+      label: Werkte het?
+      options:
+        - Ja, goed
+        - Ja, maar met problemen
+        - Nee, het apparaat werd niet gevonden
+        - Nee, gevonden maar het beeld kwam niet op de tv
+    validations:
+      required: true
+  - type: dropdown
+    id: picture
+    attributes:
+      label: Hoe was het beeld?
+      options:
+        - Scherp en vloeiend
+        - Wat wazig
+        - Haperend / schokkerig
+        - Geen beeld
+  - type: dropdown
+    id: sound
+    attributes:
+      label: Hoe was het geluid?
+      options:
+        - Goed, op de tv
+        - Ook nog op de pc
+        - Loopt niet gelijk met het beeld
+        - Geen geluid
+  - type: input
+    id: delay
+    attributes:
+      label: Hoeveel vertraging merkte je ongeveer?
+      placeholder: bijv. 3 seconden
+  - type: dropdown
+    id: network
+    attributes:
+      label: Hoe is je pc verbonden?
+      options:
+        - Netwerkkabel
+        - Wifi
+        - Weet ik niet
+  - type: textarea
+    id: notes
+    attributes:
+      label: Verder nog iets?
+      description: Foutmeldingen, ideeën, wat beter kan.

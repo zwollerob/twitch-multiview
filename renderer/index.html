@@ -29,6 +29,7 @@
     </div>
     <button id="audioBtn" class="btn" title="Welke streams geluid geven (M = alles dempen)"></button>
     <button id="chatBtn" class="btn" title="Chat van de uitgelichte stream (C)">Chat</button>
+    <button id="castBtn" class="btn casting" hidden title="Bezig met casten, klik voor opties"></button>
     <div id="account"></div>
     <button id="helpBtn" class="btn icon" title="Sneltoetsen (?)">?</button>
     <button id="fsBtn" class="btn icon" title="Volledig scherm (F / F11)"></button>
@@ -106,6 +107,41 @@
       <div class="modal-foot">
         <button class="btn" id="limitCancel">Annuleren</button>
         <button class="btn primary" id="limitSave">Opslaan</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="castModal" class="modal" hidden>
+    <div class="modal-card cast-card" role="dialog" aria-labelledby="castTitle">
+      <div class="cast-head">
+        <div class="cast-icon" id="castHeadIcon"></div>
+        <div>
+          <h2 id="castTitle">Op tv tonen <span class="beta-tag big">Beta</span></h2>
+          <div class="cast-sub">Je hele MultiView op de tv. Je pc doet het werk: alle streams, je login en Turbo blijven gelden.</div>
+        </div>
+        <button class="btn icon small cast-close" id="castClose" title="Sluiten (Esc)">✕</button>
+      </div>
+
+      <section>
+        <div class="cast-section-head">
+          <h3>Google Cast <span class="muted">Chromecast · Nvidia Shield · Google TV</span></h3>
+          <button class="btn small-text" id="castRefresh" title="Opnieuw zoeken">⟳ Zoeken</button>
+        </div>
+        <div class="cast-devices" id="castDevices"></div>
+        <label class="cast-option"><input type="checkbox" id="castMute" checked> <span>Geluid alleen op de tv <span class="muted">(pc dempen tijdens casten)</span></span></label>
+      </section>
+
+      <section>
+        <div class="cast-section-head">
+          <h3>Ander scherm <span class="muted">HDMI-kabel of Miracast</span></h3>
+          <button class="btn small-text" id="castMiracast" title="Windows-venster om een draadloos scherm (Miracast) te koppelen">Draadloos scherm koppelen…</button>
+        </div>
+        <div class="cast-screens" id="castScreens"></div>
+      </section>
+
+      <div class="cast-foot">
+        <p class="muted">Op de tv loopt het beeld een paar seconden achter. Houd de app open tijdens het casten (niet minimaliseren). Je kunt hem wel achter andere vensters zetten.</p>
+        <div class="beta-box"><span><b>Dit is een bèta.</b> Werkt het goed op jouw tv, of juist niet? Laat het weten.</span><button class="btn" id="castFeedback">Feedback geven</button></div>
       </div>
     </div>
   </div>
