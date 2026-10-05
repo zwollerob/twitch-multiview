@@ -6,6 +6,32 @@ versienummers volgens [Semantic Versioning](https://semver.org/lang/nl/):
 `MAJOR.MINOR.PATCH`, waarbij PATCH voor fixes is, MINOR voor nieuwe functies
 en MAJOR voor grote, niet-compatibele wijzigingen.
 
+## [1.1.0] - 2026-10-05
+
+### Toegevoegd
+- **Streamlimiet verhogen, op eigen risico.** In het accountmenu staat nu
+  "Max. aantal streams" (standaard 16). Je kunt kiezen uit 16, 24, 32 of 48.
+  Boven 16 opent een waarschuwingsvenster met een gele driehoek, uitleg over
+  de belasting en een verplicht vinkje "Ik begrijp het risico". De keuze wordt
+  bewaard.
+- Bij een verhoogde limiet staat een gele driehoek naast je naam, en in het
+  menu het label "Eigen risico".
+- De richtwaarden in het venster komen uit een belastingstest op een Ryzen 9
+  5900X met RTX 3060 Ti, 64 GB RAM en 1 Gbit/s internet:
+
+  | Streams | Speelden | Weggevallen beeld | Download |
+  |---|---|---|---|
+  | 16 | 16/16 | 0% | ca. 57 Mbit/s |
+  | 24 | 24/24 | 0% | ca. 85 Mbit/s |
+  | 32 | 31/32 | 0,1% | ca. 66 Mbit/s (Twitch kiest 480p voor kleine tegels) |
+  | 48 | 42/48 | 38% | ca. 135 Mbit/s |
+
+### Gewijzigd
+- De melding bij het bereiken van de limiet van 16 verwijst naar het
+  accountmenu.
+- Zolang het limietvenster open staat, doen sneltoetsen niets (behalve
+  `Esc` om het te sluiten).
+
 ## [1.0.2] - 2026-10-05
 
 ### Opgelost
@@ -104,6 +130,7 @@ Eerste versie.
   op het bureaublad en in het Startmenu.
 - "Made with AI · Zw_038_olle" en versienummer in het sneltoetsenvenster.
 
+[1.1.0]: https://github.com/zwollerob/twitch-multiview/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/zwollerob/twitch-multiview/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/zwollerob/twitch-multiview/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/zwollerob/twitch-multiview/releases/tag/v1.0.0

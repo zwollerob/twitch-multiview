@@ -5,10 +5,12 @@
 const PARTITION = 'persist:twitch';
 const AR = 16 / 9;
 const GAP = 4;
-const MAX_CHANNELS = 16;
+const DEFAULT_MAX = 16;
+const MAX_OPTIONS = [16, 24, 32, 48]; // above 16 only "at your own risk", see openLimitDialog()
 const INFO_REFRESH_MS = 60_000;
 
 const ICONS = {
+  warn: '<svg class="tri" viewBox="0 0 24 24"><path fill="#ffc400" stroke="#2a1f00" stroke-width="1" stroke-linejoin="round" d="M12 2.5 23 21.5H1z"/><path fill="#2a1f00" d="M10.9 8.6h2.2l-.35 7h-1.5zM12 17.1a1.3 1.3 0 1 1 0 2.6 1.3 1.3 0 0 1 0-2.6z"/></svg>',
   star: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="m12 2.5 2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"/></svg>',
   vol: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg>',
   mute: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3zm13.6 3 2.7-2.7-1.4-1.4-2.7 2.7-2.7-2.7-1.4 1.4 2.7 2.7-2.7 2.7 1.4 1.4 2.7-2.7 2.7 2.7 1.4-1.4z"/></svg>',
@@ -60,6 +62,7 @@ const state = {
   audio: 'featured',
   chat: false,
   hideBar: false,
+  maxStreams: DEFAULT_MAX,
 };
 
 const tiles = new Map(); // login -> tile
@@ -414,8 +417,8 @@ async function addChannels(names, { featureFirst = false } = {}) {
   }
 
   for (const n of valid) {
-    if (state.channels.length >= MAX_CHANNELS) {
-      toast(`Maximaal ${MAX_CHANNELS} streams tegelijk`);
+    if (state.channels.length >= state.maxStreams) {
+      toast(`Maximaal ${state.maxStreams} streams tegelijk${state.maxStreams === DEFAULT_MAX ? " (meer kan via je accountmenu, op eigen risico)" : ""}`);
       break;
     }
     state.channels.push(n);
@@ -736,7 +739,9 @@ function renderAccount() {
   let badge = '';
   if (user.turbo === true) badge = '<span class="badge" title="Turbo actief: geen reclame">Turbo</span>';
   else if (user.turbo === false) badge = '<span class="badge warn" title="Dit account heeft geen Turbo: je kunt reclame zien bij kanalen waar je niet op geabonneerd bent">Geen Turbo</span>';
-  acc.innerHTML = `<div class="acct" title="Account">${user.avatar ? `<img src="${esc(user.avatar)}" alt="">` : ''}<span>${esc(name)}</span>${badge}</div>`;
+  const risk = state.maxStreams > DEFAULT_MAX
+    ? `<span class="risk-dot" title="Streamlimiet verhoogd naar ${state.maxStreams} (eigen risico)">${ICONS.warn}</span>` : '';
+  acc.innerHTML = `<div class="acct" title="Account">${user.avatar ? `<img src="${esc(user.avatar)}" alt="">` : ''}<span>${esc(name)}</span>${badge}${risk}</div>`;
   acc.querySelector('.acct').addEventListener('click', () => toggleAccountMenu());
   empty.innerHTML = `<div>Ingelogd als <b>${esc(name)}</b> ${badge}</div>`;
 }
@@ -747,13 +752,62 @@ function toggleAccountMenu() {
   accountMenu.innerHTML = `
     <div class="hint">Ingelogd als <b>${esc(user.displayName || user.login)}</b></div>
     <button class="item" data-act="reload">Alle streams herladen</button>
+    <button class="item risk-item" data-act="limit">${ICONS.warn}<span>Max. aantal streams: <b>${state.maxStreams}</b></span>${state.maxStreams > DEFAULT_MAX ? '<span class="risk-tag">eigen risico</span>' : ''}</button>
     <button class="item" data-act="logout">Uitloggen</button>`;
   accountMenu.querySelector('[data-act=reload]').addEventListener('click', () => { closePopovers(); reloadAll(); });
+  accountMenu.querySelector('[data-act=limit]').addEventListener('click', () => { closePopovers(); openLimitDialog(); });
   accountMenu.querySelector('[data-act=logout]').addEventListener('click', () => { closePopovers(); api.logout(); });
   accountMenu.hidden = false;
   const r = $('#account').getBoundingClientRect();
   accountMenu.style.top = `${r.bottom + 6}px`;
   accountMenu.style.left = `${Math.max(8, r.right - 260)}px`;
+}
+
+// Raising the stream limit above 16 is allowed, but only after an explicit
+// "own risk" confirmation (numbers from a load test on a Ryzen 9 5900X +
+// RTX 3060 Ti: smooth up to 32, about a third of the frames dropped at 48).
+const LIMIT_INFO = {
+  16: ['Standaard', 'Aanbevolen. Werkt op de meeste pc’s.'],
+  24: ['Snelle pc', 'Moderne videokaart en minstens 100 Mbit/s internet.'],
+  32: ['Zeer snelle pc', 'Krachtige videokaart en processor, minstens 150 Mbit/s.'],
+  48: ['Experimenteel', 'Haperend beeld verwacht, ook op een snelle pc.'],
+};
+
+function openLimitDialog() {
+  const modal = $('#limitModal');
+  let choice = state.maxStreams;
+  modal.querySelector('.limit-options').innerHTML = MAX_OPTIONS.map(n => `
+    <label class="limit-opt${n > DEFAULT_MAX ? ' over' : ''}${n === 48 ? ' extreme' : ''}">
+      <input type="radio" name="limit" value="${n}"${n === choice ? ' checked' : ''}>
+      <span class="num">${n}</span>
+      <span class="txt"><b>${LIMIT_INFO[n][0]}</b><span>${LIMIT_INFO[n][1]}</span></span>
+    </label>`).join('');
+  const ack = modal.querySelector('#limitAck');
+  const save = modal.querySelector('#limitSave');
+  ack.checked = state.maxStreams > DEFAULT_MAX;
+  const update = () => {
+    const risky = choice > DEFAULT_MAX;
+    modal.querySelector('.risk-ack').classList.toggle('needed', risky);
+    save.disabled = risky && !ack.checked;
+    save.textContent = risky ? `Op eigen risico instellen op ${choice}` : 'Opslaan';
+    save.classList.toggle('warn-btn', risky);
+    save.classList.toggle('primary', !risky);
+  };
+  modal.querySelectorAll('input[name=limit]').forEach(r => r.addEventListener('change', () => { choice = Number(r.value); update(); }));
+  ack.onchange = update;
+  save.onclick = () => {
+    state.maxStreams = choice;
+    modal.hidden = true;
+    changed();
+    renderAccount();
+    const n = state.channels.length;
+    if (n > choice) toast(`Limiet is nu ${choice}. Je hebt ${n} streams open; nieuwe kun je pas toevoegen onder de ${choice}.`);
+    else toast(choice > DEFAULT_MAX ? `Limiet verhoogd naar ${choice} streams (eigen risico)` : `Limiet terug naar ${choice} streams`);
+  };
+  modal.querySelector('#limitCancel').onclick = () => { modal.hidden = true; };
+  modal.onclick = e => { if (e.target === modal) modal.hidden = true; };
+  update();
+  modal.hidden = false;
 }
 
 function reloadAll() {
@@ -784,6 +838,7 @@ api.onAuthChanged(async () => {
 // Keyboard shortcuts
 // ---------------------------------------------------------------------------
 function handleShortcut(k) {
+  if (!$('#limitModal').hidden && k !== 'escape') return false; // dialog open
   if (/^[1-9]$/.test(k)) {
     const ch = state.channels[Number(k) - 1];
     if (ch) feature(ch);
@@ -792,7 +847,8 @@ function handleShortcut(k) {
   switch (k) {
     case 'f': api.setFullscreen(); return true;
     case 'escape':
-      if (!$('#help').hidden) toggleHelp(false);
+      if (!$('#limitModal').hidden) $('#limitModal').hidden = true;
+      else if (!$('#help').hidden) toggleHelp(false);
       else if (!followedMenu.hidden || !accountMenu.hidden) closePopovers();
       else if (fullscreen) api.setFullscreen(false);
       return true;
@@ -861,7 +917,8 @@ function toast(text) {
   if (args.chat) state.chat = args.chat === '1';
   $('#appVersion').textContent = `· v${args.version}`;
 
-  state.channels = parseChannels((state.channels || []).join(' ')).slice(0, MAX_CHANNELS);
+  if (!MAX_OPTIONS.includes(state.maxStreams)) state.maxStreams = DEFAULT_MAX;
+  state.channels = parseChannels((state.channels || []).join(' ')).slice(0, state.maxStreams);
   if (!LAYOUTS.includes(state.layout)) state.layout = 'featured';
   if (!AUDIO_MODES.includes(state.audio)) state.audio = 'featured';
   if (!state.channels.includes(state.featured)) state.featured = state.channels[0] || null;
