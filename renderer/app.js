@@ -621,6 +621,11 @@ function changed() {
 
 $('#addForm').addEventListener('submit', e => {
   e.preventDefault();
+  if (suggestIndex >= 0 && suggestions[suggestIndex]) {
+    pickSuggestion(suggestions[suggestIndex]);
+    return;
+  }
+  closeSuggest();
   const names = parseChannels(addInput.value);
   if (!names.length) {
     if (addInput.value.trim()) toast('Geen geldige kanaalnaam');
@@ -629,6 +634,105 @@ $('#addForm').addEventListener('submit', e => {
   addInput.value = '';
   addChannels(names, { featureFirst: state.channels.length === 0 });
 });
+
+// ---------------------------------------------------------------------------
+// Autocomplete for "Kanaal toevoegen" (Twitch channel search)
+// ---------------------------------------------------------------------------
+const suggestEl = $('#suggest');
+let suggestions = [];
+let suggestIndex = -1;
+let suggestTimer = null;
+let suggestSeq = 0;
+
+function closeSuggest() {
+  clearTimeout(suggestTimer);
+  suggestSeq++; // ignore answers that are still on their way
+  suggestions = [];
+  suggestIndex = -1;
+  suggestEl.hidden = true;
+}
+
+function renderSuggest() {
+  if (!suggestions.length) {
+    suggestEl.hidden = true;
+    return;
+  }
+  suggestEl.innerHTML = '';
+  suggestions.forEach((u, i) => {
+    const login = u.login.toLowerCase();
+    const added = state.channels.includes(login);
+    const live = Boolean(u.stream);
+    const item = document.createElement('div');
+    item.className = `item${i === suggestIndex ? ' active' : ''}${added ? ' added' : ''}`;
+    item.innerHTML = `
+      ${u.profileImageURL ? `<img src="${esc(u.profileImageURL)}" alt="">` : '<span class="noimg"></span>'}
+      <div class="meta">
+        <div>${esc(u.displayName || u.login)}${added ? ' ✓' : ''}</div>
+        <div class="sub">${live ? esc((u.stream.game && u.stream.game.displayName) || 'Live') : 'offline'}</div>
+      </div>
+      ${live ? `<span class="vc">● ${nf.format(u.stream.viewersCount)}</span>` : ''}`;
+    // mousedown instead of click, so the input does not lose focus first
+    item.addEventListener('mousedown', e => {
+      e.preventDefault();
+      pickSuggestion(u);
+    });
+    item.addEventListener('mousemove', () => {
+      if (suggestIndex === i) return;
+      suggestIndex = i;
+      suggestEl.querySelectorAll('.item').forEach((el, j) => el.classList.toggle('active', j === i));
+    });
+    suggestEl.appendChild(item);
+  });
+  positionPopover(suggestEl, addInput);
+  suggestEl.hidden = false;
+}
+
+function pickSuggestion(u) {
+  const login = u.login.toLowerCase();
+  info[login] = u;
+  addInput.value = '';
+  closeSuggest();
+  if (state.channels.includes(login)) feature(login);
+  else addChannels([login], { featureFirst: state.channels.length === 0 });
+}
+
+addInput.addEventListener('input', () => {
+  clearTimeout(suggestTimer);
+  const text = addInput.value.trim();
+  // Several names or a link: no suggestions, Enter adds them as typed.
+  if (text.length < 2 || /[\s,;/]/.test(text)) {
+    closeSuggest();
+    return;
+  }
+  suggestTimer = setTimeout(async () => {
+    const seq = ++suggestSeq;
+    let list = [];
+    try {
+      list = await api.searchChannels(text);
+    } catch {
+      list = [];
+    }
+    if (seq !== suggestSeq || addInput.value.trim() !== text) return; // outdated answer
+    suggestions = list;
+    suggestIndex = list.length ? 0 : -1;
+    renderSuggest();
+  }, 220);
+});
+
+addInput.addEventListener('keydown', e => {
+  if (suggestEl.hidden) return;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    const n = suggestions.length;
+    suggestIndex = (suggestIndex + (e.key === 'ArrowDown' ? 1 : -1) + n) % n;
+    renderSuggest();
+  } else if (e.key === 'Escape') {
+    e.stopPropagation();
+    closeSuggest();
+  }
+});
+
+addInput.addEventListener('blur', () => setTimeout(closeSuggest, 100));
 
 document.querySelectorAll('#layoutSeg button').forEach(b => b.addEventListener('click', () => setLayout(b.dataset.layout)));
 $('#audioBtn').addEventListener('click', () => setAudio(AUDIO_MODES[(AUDIO_MODES.indexOf(state.audio) + 1) % AUDIO_MODES.length]));
@@ -874,7 +978,7 @@ function handleShortcut(k) {
 
 document.addEventListener('keydown', e => {
   if (e.target === addInput) {
-    if (e.key === 'Escape') addInput.blur();
+    if (e.key === 'Escape' && suggestEl.hidden) addInput.blur();
     return;
   }
   if (e.ctrlKey || e.altKey || e.metaKey) return;

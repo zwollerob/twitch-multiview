@@ -145,6 +145,17 @@ async function getChannelInfo(logins) {
   return ((r.data && r.data.users) || []).filter(Boolean);
 }
 
+// Channel search for the "Kanaal toevoegen" autocomplete (same search as the
+// Twitch website; works without being logged in).
+async function searchChannels(text) {
+  const r = await gql(
+    `query($q: String!) { searchFor(userQuery: $q, platform: "web") { channels { items { ${STREAM_FIELDS} } } } }`,
+    { q: text },
+  );
+  const items = (r.data && r.data.searchFor && r.data.searchFor.channels && r.data.searchFor.channels.items) || [];
+  return items.filter(u => u && u.login).slice(0, 8);
+}
+
 // Twitch no longer answers ad-hoc queries for followed channels ("service
 // error"); only the website's own persisted query still works. Its hash
 // changes when Twitch updates the site, so a stale hash is re-discovered from
@@ -493,6 +504,7 @@ app.whenReady().then(() => {
   handle('auth:logout', () => logout());
   handle('twitch:channels', logins => (isLoginList(logins) ? getChannelInfo(logins) : []));
   handle('twitch:followed', () => getFollowedLive());
+  handle('twitch:search', text => (typeof text === 'string' && text.trim().length >= 2 && text.length <= 50 ? searchChannels(text.trim()) : []));
   handle('window:fullscreen', on => setFullscreen(typeof on === 'boolean' ? on : !mainWin.isFullScreen()));
   handle('window:isFullscreen', () => mainWin.isFullScreen());
   handle('app:args', () => ({

@@ -318,6 +318,11 @@ body.has-streams #empty { display: none; }
 .popover .item .vc { color: #ff8080; font-size: 12px; white-space: nowrap; }
 .popover .item.added { opacity: .5; }
 .popover .hint { padding: 10px; color: var(--muted); text-align: center; }
+.popover.suggest { width: 320px; min-width: 0; }
+.popover.suggest .item { cursor: pointer; }
+.popover.suggest .item.active { background: rgba(145, 71, 255, .22); }
+.popover.suggest .item.added { opacity: .6; }
+.popover .item .noimg { width: 32px; height: 32px; border-radius: 50%; background: var(--panel-2); flex-shrink: 0; }
 .popover .hint .btn { margin-top: 8px; }
 
 .modal {

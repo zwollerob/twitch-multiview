@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('api', {
   logout: () => ipcRenderer.invoke('auth:logout'),
   channelInfo: logins => ipcRenderer.invoke('twitch:channels', logins),
   followedLive: () => ipcRenderer.invoke('twitch:followed'),
+  searchChannels: text => ipcRenderer.invoke('twitch:search', text),
   setFullscreen: on => ipcRenderer.invoke('window:fullscreen', on),
   isFullscreen: () => ipcRenderer.invoke('window:isFullscreen'),
   args: () => ipcRenderer.invoke('app:args'),

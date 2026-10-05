@@ -6,6 +6,19 @@ versienummers volgens [Semantic Versioning](https://semver.org/lang/nl/):
 `MAJOR.MINOR.PATCH`, waarbij PATCH voor fixes is, MINOR voor nieuwe functies
 en MAJOR voor grote, niet-compatibele wijzigingen.
 
+## [1.2.0] - 2026-10-05
+
+### Toegevoegd
+- **Automatisch aanvullen bij "Kanaal toevoegen".** Vanaf 2 letters verschijnt
+  een lijst met maximaal 8 kanalen uit de zoekfunctie van Twitch, ook kanalen
+  die je niet volgt en ook zonder login. Per kanaal zie je de profielfoto, de
+  naam en of het live is (met game en kijkers).
+- Kiezen met de muis of met `↑` `↓` en `Enter`; `Esc` sluit de lijst.
+  Kanalen die al open staan krijgen een ✓; kies je zo'n kanaal, dan wordt het
+  uitgelicht.
+- Typ je een spatie, komma of link, dan verschijnt er geen lijst en werkt
+  `Enter` zoals voorheen (meerdere namen of een twitch.tv-link toevoegen).
+
 ## [1.1.0] - 2026-10-05
 
 ### Toegevoegd
@@ -130,6 +143,7 @@ Eerste versie.
   op het bureaublad en in het Startmenu.
 - "Made with AI · Zw_038_olle" en versienummer in het sneltoetsenvenster.
 
+[1.2.0]: https://github.com/zwollerob/twitch-multiview/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/zwollerob/twitch-multiview/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/zwollerob/twitch-multiview/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/zwollerob/twitch-multiview/compare/v1.0.0...v1.0.1
