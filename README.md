@@ -2,7 +2,7 @@
 
 Meerdere Twitch-streams tegelijk kijken in één venster, ingelogd met je eigen
 Twitch-account. Alle streams en de chat delen één sessie, dus je Turbo (of je
-abonnementen) geldt overal: geen reclame.
+abonnementen) geldt overal: geen reclame. MAX 16 streams tegelijk.
 
 ## Downloaden
 
