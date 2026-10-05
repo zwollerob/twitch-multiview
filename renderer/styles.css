@@ -505,3 +505,21 @@ body.has-streams #empty { display: none; }
   padding: 10px 12px; border-radius: 10px;
   border: 1px solid rgba(255, 122, 217, .4); background: rgba(255, 122, 217, .08); line-height: 1.4;
 }
+
+/* ---------- Lurken ---------- */
+.lurk { display: flex; flex-shrink: 0; }
+.lurk #lurkBtn { border-radius: 6px 0 0 6px; font-variant-numeric: tabular-nums; }
+.lurk .lurk-more { width: 24px; border-left: 0; border-radius: 0 6px 6px 0; font-size: 11px; }
+.lurk.on #lurkBtn, .lurk.on .lurk-more { background: linear-gradient(90deg, #ff7ad9, #9147ff); border-color: #b06bff; color: #fff; }
+.lurk.on #lurkBtn svg { animation: lurkSpin 3s linear infinite; }
+@keyframes lurkSpin { 50% { transform: scale(1.15); } }
+.popover.lurk-menu { min-width: 150px; }
+.popover.lurk-menu .item { justify-content: space-between; }
+.popover.lurk-menu .item.active { color: var(--accent-hi); font-weight: 700; }
+.popover.lurk-menu .check { color: var(--accent-hi); }
+.popover.lurk-menu .lurk-check {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 4px; padding: 9px 8px 5px; border-top: 1px solid var(--border);
+  cursor: pointer; white-space: nowrap;
+}
+.popover.lurk-menu .lurk-check input { accent-color: var(--accent); }

@@ -38,6 +38,9 @@ Daarna staat bij je naam een **Turbo**-badge. Je login blijft bewaard.
   *Geluid: …* wisselt tussen *uitgelicht*, *alle* en *uit*. Met de
   luidspreker op een stream zet je die apart aan of uit.
 - **Chat**: toont de chat van de uitgelichte stream.
+- **Lurken** (`K`): wisselt automatisch naar een willekeurige live stream uit
+  je overzicht, elke 15 seconden tot 10 minuten. Standaard verbergt hij de
+  kleine streams, zodat één stream het hele venster vult.
 - **Op tv tonen** (bèta, in het accountmenu): cast de hele app naar een
   Chromecast, Nvidia Shield of Google TV, of zet hem volledig scherm op een
   ander scherm. De eerste keer vraagt Windows Firewall om toestemming: kies
@@ -60,6 +63,7 @@ Je kanalen, layout en instellingen worden bewaard voor de volgende keer.
 | `L` | Layout wisselen |
 | `U` / `G` / `S` | Uitgelicht / Raster / Solo |
 | `C` | Chat aan/uit |
+| `K` | Lurken aan/uit |
 | `M` | Alles dempen aan/uit |
 | `H` | Menubalk automatisch verbergen |
 | `R` | Uitgelichte stream herladen |

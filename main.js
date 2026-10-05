@@ -388,7 +388,7 @@ function moveToDisplay(id) {
 // --- Keyboard shortcuts while focus is inside a player ---------------------
 // Keys pressed inside a <webview> never reach the host page, so they are
 // intercepted here and forwarded to the UI.
-const PLAYER_SHORTCUTS = new Set(['f', 'escape', 'l', 'g', 'u', 's', 'c', 'h', 'm', 'r', 'n', 'arrowleft', 'arrowright', '?',
+const PLAYER_SHORTCUTS = new Set(['f', 'escape', 'l', 'g', 'u', 's', 'c', 'k', 'h', 'm', 'r', 'n', 'arrowleft', 'arrowright', '?',
   '1', '2', '3', '4', '5', '6', '7', '8', '9']);
 
 function hookGuest(contents) {

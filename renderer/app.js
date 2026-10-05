@@ -10,6 +10,7 @@ const MAX_OPTIONS = [16, 24, 32, 48]; // above 16 only "at your own risk", see o
 const INFO_REFRESH_MS = 60_000;
 
 const ICONS = {
+  shuffle: '<svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>',
   cast: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M21 3H3a2 2 0 0 0-2 2v3h2V5h18v14h-7v2h7a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM1 18v3h3a3 3 0 0 0-3-3zm0-4v2a5 5 0 0 1 5 5h2a7 7 0 0 0-7-7zm0-4v2a9 9 0 0 1 9 9h2A11 11 0 0 0 1 10z"/></svg>',
   dongle: '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path fill="currentColor" d="M11 2h2v5h-2z"/><circle cx="12" cy="13" r="2" fill="currentColor"/></svg>',
   tvbox: '<svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M4 9 12 4l8 5-8 5z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M4 9v6l8 5 8-5V9"/></svg>',
@@ -68,6 +69,10 @@ const state = {
   chat: false,
   hideBar: false,
   maxStreams: DEFAULT_MAX,
+  lurk: false,
+  lurkDelay: 60, // seconds
+  lurkSolo: true, // hide the small streams while lurking
+  lurkReturn: null, // layout to go back to when lurking stops
 };
 
 const tiles = new Map(); // login -> tile
@@ -448,6 +453,7 @@ function feature(ch) {
   state.featured = ch;
   muteOverride = {};
   changed();
+  if (state.lurk && !lurkSwitching) lurkSchedule(); // your own choice gets a full turn
 }
 
 function featureOffset(delta) {
@@ -460,6 +466,7 @@ function featureOffset(delta) {
 function setLayout(l) {
   if (!LAYOUTS.includes(l)) return;
   if (l !== 'solo') soloReturn = null;
+  if (!lurkLayoutChange) state.lurkReturn = null; // a layout you pick yourself wins
   state.layout = l;
   muteOverride = {};
   changed();
@@ -770,11 +777,135 @@ function positionPopover(menu, anchor) {
 function closePopovers() {
   followedMenu.hidden = true;
   accountMenu.hidden = true;
+  lurkMenu.hidden = true;
 }
 
 document.addEventListener('mousedown', e => {
-  if (!e.target.closest('.popover, #followedBtn, #account')) closePopovers();
+  if (!e.target.closest('.popover, #followedBtn, #account, #lurkMore')) closePopovers();
 });
+
+// ---------------------------------------------------------------------------
+// Lurken: automatically feature a random live stream every few seconds/minutes.
+// "Random" uses a shuffled bag, so everyone gets a turn before anyone repeats.
+// ---------------------------------------------------------------------------
+const LURK_DELAYS = [15, 30, 60, 120, 300, 600];
+const lurkMenu = $('#lurkMenu');
+let lurkTimer = null;
+let lurkNextAt = 0;
+let lurkBag = [];
+let lurkSwitching = false;
+let lurkWarned = false;
+let lurkLayoutChange = false;
+
+// While lurking with "hide small streams", switch to Solo and remember the
+// layout to return to afterwards.
+function lurkApplyLayout() {
+  lurkLayoutChange = true;
+  if (state.lurk && state.lurkSolo && state.layout !== 'solo') {
+    const back = state.layout;
+    setLayout('solo');
+    state.lurkReturn = back;
+  } else if ((!state.lurk || !state.lurkSolo) && state.lurkReturn) {
+    const back = state.lurkReturn;
+    state.lurkReturn = null;
+    setLayout(back);
+  }
+  lurkLayoutChange = false;
+  changed();
+}
+
+const fmtDelay = sec => (sec < 60 ? `${sec} s` : `${sec / 60} min`);
+
+function lurkCandidates() {
+  // Offline channels are skipped; channels without info yet are allowed.
+  return state.channels.filter(ch => ch !== state.featured && (!info[ch] || info[ch].stream));
+}
+
+function lurkPick() {
+  const cands = lurkCandidates();
+  if (!cands.length) return null;
+  lurkBag = lurkBag.filter(c => cands.includes(c));
+  if (!lurkBag.length) {
+    lurkBag = [...cands];
+    for (let i = lurkBag.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [lurkBag[i], lurkBag[j]] = [lurkBag[j], lurkBag[i]];
+    }
+  }
+  return lurkBag.shift();
+}
+
+function lurkSchedule() {
+  clearTimeout(lurkTimer);
+  lurkTimer = null;
+  lurkNextAt = state.lurk ? Date.now() + state.lurkDelay * 1000 : 0;
+  if (state.lurk) lurkTimer = setTimeout(lurkStep, state.lurkDelay * 1000);
+  renderLurk();
+}
+
+function lurkStep() {
+  const ch = lurkPick();
+  if (ch) {
+    lurkWarned = false;
+    lurkSwitching = true;
+    feature(ch);
+    lurkSwitching = false;
+    toast(`Lurken: ${displayName(ch)}`);
+  } else if (!lurkWarned) {
+    lurkWarned = true;
+    toast('Lurken wacht: er is geen andere live stream om naar te wisselen');
+  }
+  lurkSchedule();
+}
+
+function setLurk(on) {
+  state.lurk = on;
+  lurkBag = [];
+  lurkWarned = false;
+  lurkApplyLayout();
+  lurkSchedule();
+  toast(on ? `Lurken aan: elke ${fmtDelay(state.lurkDelay)} een willekeurige live stream` : 'Lurken uit');
+}
+
+function renderLurk() {
+  const btn = $('#lurkBtn');
+  let label = 'Lurken';
+  if (state.lurk && lurkNextAt) {
+    const left = Math.max(0, Math.ceil((lurkNextAt - Date.now()) / 1000));
+    label += ` · ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+  }
+  btn.innerHTML = `${ICONS.shuffle}<span>${label}</span>`;
+  btn.classList.toggle('on', state.lurk);
+  $('#lurkCtl').classList.toggle('on', state.lurk);
+  btn.title = state.lurk
+    ? `Lurken staat aan: elke ${fmtDelay(state.lurkDelay)} een willekeurige live stream. Klik om te stoppen (K).`
+    : `Lurken: wissel automatisch naar een willekeurige live stream uit je overzicht, elke ${fmtDelay(state.lurkDelay)} (K)`;
+}
+
+function openLurkMenu() {
+  if (!lurkMenu.hidden) return closePopovers();
+  closePopovers();
+  lurkMenu.innerHTML = '<div class="hint">Wissel elke…</div>' + LURK_DELAYS.map(sec =>
+    `<button class="item lurk-opt${sec === state.lurkDelay ? ' active' : ''}" data-sec="${sec}">${fmtDelay(sec)}${sec === state.lurkDelay ? '<span class="check">✓</span>' : ''}</button>`).join('');
+  lurkMenu.insertAdjacentHTML('beforeend', `<label class="lurk-check"><input type="checkbox" id="lurkSoloChk"${state.lurkSolo ? ' checked' : ''}> Kleine streams verbergen</label>`);
+  $('#lurkSoloChk').addEventListener('change', e => {
+    state.lurkSolo = e.target.checked;
+    lurkApplyLayout();
+  });
+  lurkMenu.querySelectorAll('.lurk-opt').forEach(b => b.addEventListener('click', () => {
+    state.lurkDelay = Number(b.dataset.sec);
+    closePopovers();
+    changed();
+    if (state.lurk) lurkSchedule(); else renderLurk();
+    toast(`Lurken wisselt elke ${fmtDelay(state.lurkDelay)}${state.lurk ? '' : ' (zet Lurken aan met de knop)'}`);
+  }));
+  positionPopover(lurkMenu, $('#lurkCtl'));
+  lurkMenu.hidden = false;
+}
+
+$('#lurkBtn').addEventListener('click', () => setLurk(!state.lurk));
+$('#lurkMore').addEventListener('click', () => openLurkMenu());
+setInterval(() => { if (state.lurk) renderLurk(); }, 1000);
 
 async function openFollowed() {
   if (!followedMenu.hidden) return closePopovers();
@@ -1121,6 +1252,7 @@ function handleShortcut(k) {
     case 'g': setLayout('grid'); return true;
     case 's': setLayout('solo'); return true;
     case 'c': toggleChat(); return true;
+    case 'k': setLurk(!state.lurk); return true;
     case 'h':
       state.hideBar = !state.hideBar;
       changed();
@@ -1186,6 +1318,10 @@ function toast(text) {
   if (!LAYOUTS.includes(state.layout)) state.layout = 'featured';
   if (!AUDIO_MODES.includes(state.audio)) state.audio = 'featured';
   if (!state.channels.includes(state.featured)) state.featured = state.channels[0] || null;
+  if (!LURK_DELAYS.includes(state.lurkDelay)) state.lurkDelay = 60;
+  state.lurk = state.lurk === true;
+  state.lurkSolo = state.lurkSolo !== false;
+  if (!LAYOUTS.includes(state.lurkReturn)) state.lurkReturn = null;
 
   fullscreen = await api.isFullscreen();
   state.channels.forEach(createTile);
@@ -1193,4 +1329,5 @@ function toast(text) {
   refreshUser();
   refreshInfo();
   setInterval(refreshInfo, INFO_REFRESH_MS);
+  lurkSchedule(); // also resumes lurking if it was on when the app closed
 })();

@@ -27,6 +27,10 @@
       <button data-layout="grid" title="Alles even groot (G)">Raster</button>
       <button data-layout="solo" title="Alleen de uitgelichte stream (S)">Solo</button>
     </div>
+    <div class="lurk" id="lurkCtl">
+      <button class="btn" id="lurkBtn"></button>
+      <button class="btn icon lurk-more" id="lurkMore" title="Wisseltijd voor Lurken">▾</button>
+    </div>
     <button id="audioBtn" class="btn" title="Welke streams geluid geven (M = alles dempen)"></button>
     <button id="chatBtn" class="btn" title="Chat van de uitgelichte stream (C)">Chat</button>
     <button id="castBtn" class="btn casting" hidden title="Bezig met casten, klik voor opties"></button>
@@ -60,6 +64,7 @@
 
   <div id="suggest" class="popover suggest" hidden></div>
   <div id="followedMenu" class="popover" hidden></div>
+  <div id="lurkMenu" class="popover lurk-menu" hidden></div>
   <div id="accountMenu" class="popover" hidden></div>
 
   <div id="help" class="modal" hidden>
@@ -73,6 +78,7 @@
         <tr><td><kbd>L</kbd></td><td>Layout wisselen (Uitgelicht → Raster → Solo)</td></tr>
         <tr><td><kbd>U</kbd> <kbd>G</kbd> <kbd>S</kbd></td><td>Uitgelicht / Raster / Solo</td></tr>
         <tr><td><kbd>C</kbd></td><td>Chat van uitgelichte stream</td></tr>
+        <tr><td><kbd>K</kbd></td><td>Lurken aan/uit (automatisch wisselen naar een willekeurige live stream)</td></tr>
         <tr><td><kbd>M</kbd></td><td>Alles dempen aan/uit</td></tr>
         <tr><td><kbd>H</kbd></td><td>Menubalk automatisch verbergen</td></tr>
         <tr><td><kbd>R</kbd></td><td>Uitgelichte stream herladen</td></tr>

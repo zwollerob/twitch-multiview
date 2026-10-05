@@ -6,6 +6,27 @@ versienummers volgens [Semantic Versioning](https://semver.org/lang/nl/):
 `MAJOR.MINOR.PATCH`, waarbij PATCH voor fixes is, MINOR voor nieuwe functies
 en MAJOR voor grote, niet-compatibele wijzigingen.
 
+## [1.3.0-beta.2] - 2026-10-05 (bèta)
+
+Tweede bèta van 1.3.0: alles uit beta.1 (Op tv tonen) plus Lurken.
+
+### Toegevoegd
+- **Lurken** (knop in de bovenbalk, sneltoets `K`): licht automatisch een
+  willekeurige **live** stream uit je overzicht uit, met een instelbare
+  wisseltijd (15 s, 30 s, 1 min, 2 min, 5 min of 10 min, via het ▾ naast de knop).
+  - Eerlijk willekeurig: nooit twee keer achter elkaar dezelfde, en iedereen
+    komt aan de beurt voordat er herhaling is. Offline kanalen worden
+    overgeslagen.
+  - Aftellen op de knop ("Lurken · 0:42") en bij elke wissel kort de naam van
+    de streamer in beeld.
+  - **Kleine streams verbergen** (standaard aan): tijdens het lurken schakelt
+    de app naar Solo, zodat één stream het hele venster vult; na het lurken
+    komt je eigen layout terug. Kies je zelf een layout tijdens het lurken,
+    dan blijft die staan.
+  - Zelf een stream uitlichten herstart de timer, zodat je keuze een volle
+    beurt krijgt.
+  - Aan/uit, wisseltijd en de verberg-optie worden bewaard.
+
 ## [1.3.0-beta.1] - 2026-10-05 (bèta)
 
 Bèta-versie: de nieuwe castfunctie wordt eerst door een kleinere groep
@@ -178,6 +199,7 @@ Eerste versie.
   op het bureaublad en in het Startmenu.
 - "Made with AI · Zw_038_olle" en versienummer in het sneltoetsenvenster.
 
+[1.3.0-beta.2]: https://github.com/zwollerob/twitch-multiview/compare/v1.3.0-beta.1...v1.3.0-beta.2
 [1.3.0-beta.1]: https://github.com/zwollerob/twitch-multiview/compare/v1.2.0...v1.3.0-beta.1
 [1.2.0]: https://github.com/zwollerob/twitch-multiview/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/zwollerob/twitch-multiview/compare/v1.0.2...v1.1.0
