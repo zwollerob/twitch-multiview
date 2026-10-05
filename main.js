@@ -145,11 +145,98 @@ async function getChannelInfo(logins) {
   return ((r.data && r.data.users) || []).filter(Boolean);
 }
 
+// Twitch no longer answers ad-hoc queries for followed channels ("service
+// error"); only the website's own persisted query still works. Its hash
+// changes when Twitch updates the site, so a stale hash is re-discovered from
+// the website itself and remembered in the config.
+const FOLLOWED_OP = 'FollowingLive_CurrentUser';
+const FOLLOWED_HASH = 'bbfa83064e90280dce3eaa9de3a18eb6647505546336313241afdf569b6b34b6';
+
+async function queryFollowed(sha256Hash) {
+  const token = await getAuthToken();
+  const res = await fetch(GQL_URL, {
+    method: 'POST',
+    headers: { 'Client-Id': GQL_CLIENT_ID, 'Content-Type': 'text/plain;charset=UTF-8', Authorization: `OAuth ${token}` },
+    body: JSON.stringify([{
+      operationName: FOLLOWED_OP,
+      variables: { imageWidth: 50, limit: 100, includeCostreaming: true },
+      extensions: { persistedQuery: { version: 1, sha256Hash } },
+    }]),
+  });
+  if (!res.ok) throw new Error(`Twitch antwoordde met HTTP ${res.status}`);
+  const j = await res.json();
+  return Array.isArray(j) ? j[0] : j;
+}
+
+// Open the "Following > Live" page invisibly and read the hash of the query
+// the website itself sends.
+async function discoverFollowedHash() {
+  const win = new BrowserWindow({
+    show: false,
+    webPreferences: { partition: PARTITION, sandbox: true, contextIsolation: true, nodeIntegration: false },
+  });
+  win.webContents.setAudioMuted(true);
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  try {
+    await win.loadURL('about:blank');
+    const dbg = win.webContents.debugger;
+    dbg.attach('1.3');
+    await dbg.sendCommand('Network.enable');
+    const found = new Promise(resolve => {
+      dbg.on('message', (e, method, p) => {
+        if (method !== 'Network.requestWillBeSent' || !p.request.url.startsWith(GQL_URL)) return;
+        try {
+          const body = JSON.parse(p.request.postData || '[]');
+          const op = (Array.isArray(body) ? body : [body]).find(x => x.operationName === FOLLOWED_OP);
+          const hash = op && op.extensions && op.extensions.persistedQuery && op.extensions.persistedQuery.sha256Hash;
+          if (/^[0-9a-f]{64}$/.test(hash || '')) resolve(hash);
+        } catch { /* not JSON */ }
+      });
+    });
+    win.loadURL('https://www.twitch.tv/directory/following/live').catch(() => {});
+    return await Promise.race([found, new Promise(resolve => setTimeout(() => resolve(null), 20000))]);
+  } finally {
+    win.destroy();
+  }
+}
+
 async function getFollowedLive() {
-  const r = await gql(`query { currentUser { followedLiveUsers(first: 100) { edges { node { ${STREAM_FIELDS} } } } } }`);
+  if (!(await getAuthToken())) return null; // not logged in
+
+  let hash = readConfig().followedQueryHash || FOLLOWED_HASH;
+  let r = await queryFollowed(hash);
+  const notFound = res => (res.errors || []).some(e => /PersistedQueryNotFound/i.test(e.message));
+  if (notFound(r)) {
+    const fresh = await discoverFollowedHash();
+    if (fresh && fresh !== hash) {
+      hash = fresh;
+      const c = readConfig();
+      c.followedQueryHash = fresh;
+      writeConfig(c);
+      r = await queryFollowed(hash);
+    }
+  }
+
   const cu = r.data && r.data.currentUser;
-  if (!cu) return null; // not logged in
-  return cu.followedLiveUsers.edges.map(e => e.node).filter(n => n && n.stream);
+  const followed = cu && cu.followedLiveUsers;
+  if (!followed) {
+    if (r.data && r.data.currentUser === null && !r.errors) return null; // login expired
+    const msg = (r.errors || []).map(e => e.message).join(', ') || 'onbekende fout';
+    throw new Error(`Twitch gaf een fout: ${msg}`);
+  }
+  return (followed.edges || [])
+    .map(e => e && e.node)
+    .filter(n => n && n.stream)
+    .map(n => ({
+      login: n.login,
+      displayName: n.displayName,
+      profileImageURL: n.profileImageURL,
+      stream: {
+        viewersCount: n.stream.viewersCount || 0,
+        title: n.stream.title || '',
+        game: n.stream.game ? { displayName: n.stream.game.displayName || n.stream.game.name } : null,
+      },
+    }));
 }
 
 function openLogin() {

@@ -6,6 +6,25 @@ versienummers volgens [Semantic Versioning](https://semver.org/lang/nl/):
 `MAJOR.MINOR.PATCH`, waarbij PATCH voor fixes is, MINOR voor nieuwe functies
 en MAJOR voor grote, niet-compatibele wijzigingen.
 
+## [1.0.2] - 2026-10-05
+
+### Opgelost
+- **"Live gevolgd" werkte niet** en gaf "Kon Twitch niet bereiken". Twitch
+  beantwoordt de losse GraphQL-vraag naar gevolgde kanalen
+  (`followedLiveUsers`, ook `follows`) niet meer en geeft een "service error";
+  ook de officiële Helix-API weigert, omdat een website-login geen
+  `user:read:follows`-toestemming heeft. De app gebruikt nu dezelfde opgeslagen
+  aanvraag als de Twitch-website zelf (`FollowingLive_CurrentUser`).
+- Als Twitch die aanvraag bij een website-update verandert, haalt de app de
+  nieuwe versie automatisch op van de Twitch-website (onzichtbaar, in je eigen
+  sessie) en onthoudt die. Je hoeft daarvoor niet te updaten.
+- In het menu "Live gevolgd" kreeg een kanaal een ✓ ook als het niet kon
+  worden toegevoegd omdat het maximum van 16 streams al bereikt was.
+
+### Gewijzigd
+- Gaat het ophalen toch mis, dan toont het menu nu de echte foutmelding van
+  Twitch in plaats van altijd "Kon Twitch niet bereiken".
+
 ## [1.0.1] - 2026-10-04
 
 Beveiligingsupdate. Gebruikers van 1.0.0 wordt aangeraden te updaten.
@@ -85,5 +104,6 @@ Eerste versie.
   op het bureaublad en in het Startmenu.
 - "Made with AI · Zw_038_olle" en versienummer in het sneltoetsenvenster.
 
+[1.0.2]: https://github.com/zwollerob/twitch-multiview/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/zwollerob/twitch-multiview/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/zwollerob/twitch-multiview/releases/tag/v1.0.0

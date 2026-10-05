@@ -674,8 +674,10 @@ async function openFollowed() {
   let list;
   try {
     list = await api.followedLive();
-  } catch {
-    followedMenu.innerHTML = '<div class="hint">Kon Twitch niet bereiken.</div>';
+  } catch (err) {
+    // Electron prefixes IPC errors with "Error invoking remote method ...: Error: "
+    const detail = String((err && err.message) || err).replace(/^.*?Error: /, '');
+    followedMenu.innerHTML = `<div class="hint">Kon je gevolgde kanalen niet ophalen.<br><span class="muted">${esc(detail)}</span></div>`;
     return;
   }
   if (list === null) {
@@ -708,8 +710,10 @@ async function openFollowed() {
         feature(login);
       } else {
         await addChannels([login]);
-        item.classList.add('added');
-        item.querySelector('.meta div').textContent = `${u.displayName} ✓`;
+        if (state.channels.includes(login)) { // not added when the maximum is reached
+          item.classList.add('added');
+          item.querySelector('.meta div').textContent = `${u.displayName} ✓`;
+        }
       }
     });
     followedMenu.appendChild(item);
