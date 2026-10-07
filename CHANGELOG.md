@@ -6,6 +6,30 @@ versienummers volgens [Semantic Versioning](https://semver.org/lang/nl/):
 `MAJOR.MINOR.PATCH`, waarbij PATCH voor fixes is, MINOR voor nieuwe functies
 en MAJOR voor grote, niet-compatibele wijzigingen.
 
+## [1.3.0-beta.3] - 2026-10-07 (bèta)
+
+### Toegevoegd
+- **Vaste videokwaliteit:** de uitgelichte stream speelt in de beste
+  kwaliteit tot en met **1080p**, de kleine streams tot en met **720p**, ook
+  als de limiet boven 16 streams staat. Licht je een andere stream uit (zelf of
+  via Lurken), dan schakelen beide streams direct om. Heeft een stream geen
+  1080p of 720p, dan wordt de hoogste lagere kwaliteit gekozen.
+- Kies je zelf een kwaliteit in het instellingenmenu van een speler, dan
+  blijft die staan. De app grijpt alleen weer in als de speler zichzelf
+  terugzet naar "automatisch" (bijvoorbeeld na herladen).
+
+### Gewijzigd
+- Het waarschuwingsvenster voor meer dan 16 streams meldt nu dat de
+  testresultaten met automatische kwaliteit zijn gemeten en dat de grens met
+  vaste 720p/1080p waarschijnlijk lager ligt.
+
+### Technisch
+- Twitch heeft geen officiële instelling voor kwaliteit per speler. De app
+  gebruikt de interne speler-API (`mediaPlayerInstance.setQuality`), die via
+  de React-componentenboom van de speler wordt gevonden. Kan Twitch bij een
+  update van de speler laten breken; dan valt de speler terug op de
+  automatische kwaliteit van Twitch.
+
 ## [1.3.0-beta.2] - 2026-10-05 (bèta)
 
 Tweede bèta van 1.3.0: alles uit beta.1 (Op tv tonen) plus Lurken.
@@ -199,6 +223,7 @@ Eerste versie.
   op het bureaublad en in het Startmenu.
 - "Made with AI · Zw_038_olle" en versienummer in het sneltoetsenvenster.
 
+[1.3.0-beta.3]: https://github.com/zwollerob/twitch-multiview/compare/v1.3.0-beta.2...v1.3.0-beta.3
 [1.3.0-beta.2]: https://github.com/zwollerob/twitch-multiview/compare/v1.3.0-beta.1...v1.3.0-beta.2
 [1.3.0-beta.1]: https://github.com/zwollerob/twitch-multiview/compare/v1.2.0...v1.3.0-beta.1
 [1.2.0]: https://github.com/zwollerob/twitch-multiview/compare/v1.1.0...v1.2.0

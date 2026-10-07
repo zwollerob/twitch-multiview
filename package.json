@@ -1,6 +1,6 @@
 {
   "name": "twitch-multiview",
-  "version": "1.3.0-beta.2",
+  "version": "1.3.0-beta.3",
   "description": "Meerdere Twitch-streams tegelijk, ingelogd (Turbo = geen reclame)",
   "main": "main.js",
   "scripts": {

@@ -257,7 +257,68 @@ function layout() {
     }
   }
   applyAudio();
+  applyQualities();
 }
+
+// ---------------------------------------------------------------------------
+// Video quality: the featured stream up to 1080p, the small ones up to 720p.
+// Twitch has no official per-player setting, so this uses the player's own
+// internal API (mediaPlayerInstance.setQuality), found via React's fiber tree.
+// A quality you pick yourself in a player's menu is left alone; the app only
+// steps in again when the player falls back to "auto" (e.g. after a reload).
+// ---------------------------------------------------------------------------
+const QUALITY_FEATURED = 1080;
+const QUALITY_SMALL = 720;
+
+const qualityJs = (target, force) => `(() => {
+  const fiberKey = el => Object.keys(el).find(k => k.startsWith('__reactFiber') || k.startsWith('__reactInternalInstance'));
+  const findPlayer = () => {
+    for (const video of document.querySelectorAll('video')) {
+      // The <video> itself is not managed by React: start at the nearest
+      // ancestor that is, and walk up the fiber tree from there.
+      let el = video;
+      while (el && !fiberKey(el)) el = el.parentElement;
+      if (!el) continue;
+      for (let f = el[fiberKey(el)], i = 0; f && i < 80; i++, f = f.return) {
+        const p = f.memoizedProps && f.memoizedProps.mediaPlayerInstance;
+        if (p && typeof p.getQualities === 'function' && typeof p.setQuality === 'function') return p;
+      }
+    }
+    return null;
+  };
+  const p = findPlayer();
+  if (!p) return 'wait';
+  const auto = typeof p.isAutoQualityMode === 'function' ? p.isAutoQualityMode() : true;
+  if (!${force} && !auto) return 'manual';
+  const h = q => { const m = String((q && q.name) || '').match(/(\\d+)p/); return m ? Number(m[1]) : 0; };
+  const list = (p.getQualities() || []).filter(q => h(q) > 0).sort((a, b) => h(b) - h(a));
+  if (!list.length) return 'wait';
+  const pick = list.find(q => h(q) <= ${target}) || list[list.length - 1];
+  const cur = p.getQuality && p.getQuality();
+  if (!auto && cur && cur.name === pick.name) return 'ok';
+  if (typeof p.setAutoQualityMode === 'function') p.setAutoQualityMode(false);
+  p.setQuality(pick);
+  return 'set ' + pick.name;
+})()`;
+
+function applyQuality(t, force) {
+  if (!t.ready) return;
+  const target = t.ch === state.featured ? QUALITY_FEATURED : QUALITY_SMALL;
+  t.wv.executeJavaScript(qualityJs(target, force))
+    .then(res => { if (res !== 'wait') t.qTarget = target; })
+    .catch(() => {});
+}
+
+// Only tiles whose target changed (or that are not set yet) are forced.
+function applyQualities() {
+  for (const t of tiles.values()) {
+    const target = t.ch === state.featured ? QUALITY_FEATURED : QUALITY_SMALL;
+    if (t.qTarget !== target) applyQuality(t, true);
+  }
+}
+
+// Players that are still loading, or that reset themselves to "auto".
+setInterval(() => { for (const t of tiles.values()) applyQuality(t, t.qTarget === undefined || t.qTarget === null); }, 10000);
 
 let resizeTimer = null;
 new ResizeObserver(() => {
@@ -330,8 +391,10 @@ function createTile(ch) {
 
   wv.addEventListener('dom-ready', () => {
     t.ready = true;
+    t.qTarget = null; // new page: quality has to be set again
     wv.executeJavaScript(GUEST_JS).catch(() => {});
     applyAudio();
+    setTimeout(() => applyQuality(t, true), 4000);
   });
   wv.addEventListener('console-message', e => onGuestMessage(t, e.message || ''));
 
