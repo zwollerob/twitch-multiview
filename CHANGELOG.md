@@ -6,6 +6,16 @@ versienummers volgens [Semantic Versioning](https://semver.org/lang/nl/):
 `MAJOR.MINOR.PATCH`, waarbij PATCH voor fixes is, MINOR voor nieuwe functies
 en MAJOR voor grote, niet-compatibele wijzigingen.
 
+## [Unreleased]
+
+### Opgelost
+- **Bonuskist bij kanaalpunten claimen gaf "Error claiming bonus".** Twitch
+  weigerde het claimen met "failed integrity check": de app gaf zich uit als
+  Chrome, maar met het volledige versienummer (`Chrome/152.0.7977.130`),
+  terwijl echte Chrome alleen het hoofdnummer stuurt (`Chrome/152.0.0.0`).
+  Twitch' botcontrole zag de app daardoor als bot. De app stuurt nu dezelfde
+  user agent als Chrome, en de kist kan weer worden geclaimd.
+
 ## [1.3.0-beta.3] - 2026-10-07 (bèta)
 
 ### Toegevoegd
