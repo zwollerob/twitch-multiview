@@ -7,7 +7,13 @@ const fs = require('fs');
 // All Twitch content (players, chat, login) shares this persistent session,
 // so one login applies everywhere and Turbo / subscriptions remove the ads.
 const PARTITION = 'persist:twitch';
-const CHROME_UA = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome} Safari/537.36`;
+const FULL_UA = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome} Safari/537.36`;
+// Debug experiment (dev runs only): --exp-ua=reduced sends the UA the way real
+// Chrome does ("Chrome/152.0.0.0"), --exp-ua=electron keeps Electron's own UA.
+const EXP_UA = (!require('electron').app.isPackaged && (process.argv.find(a => a.startsWith('--exp-ua=')) || '').slice(9)) || 'full';
+const CHROME_UA = EXP_UA === 'reduced'
+  ? FULL_UA.replace(/Chrome\/[\d.]+/, `Chrome/${process.versions.chrome.split('.')[0]}.0.0.0`)
+  : FULL_UA;
 const GQL_URL = 'https://gql.twitch.tv/gql';
 const GQL_CLIENT_ID = 'kimne78kx3ncx6brgo4mv6wki5h1ko'; // Twitch web client
 
@@ -78,7 +84,7 @@ app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 // A covered window must keep painting and playing: streams should not pause
 // behind other windows, and casting records the window itself.
 app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
-app.userAgentFallback = CHROME_UA;
+if (EXP_UA !== 'electron') app.userAgentFallback = CHROME_UA;
 
 const CONFIG_FILE = () => path.join(app.getPath('userData'), 'multiview-config.json');
 
@@ -550,7 +556,8 @@ app.whenReady().then(() => {
   protocol.handle('app', serveUi);
 
   const ses = twitchSession();
-  ses.setUserAgent(CHROME_UA);
+  if (EXP_UA !== 'electron') ses.setUserAgent(CHROME_UA);
+  if (DEBUG_LOG) DEBUG_LOG.write('UA mode', EXP_UA, EXP_UA === 'electron' ? '(Electron default)' : CHROME_UA);
   ses.setPermissionRequestHandler((wc, permission, cb, details) =>
     cb(twitchPermissionAllowed(permission, details.requestingUrl || wc.getURL())));
   ses.setPermissionCheckHandler((wc, permission, origin) => twitchPermissionAllowed(permission, origin));
