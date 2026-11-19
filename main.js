@@ -7,7 +7,11 @@ const fs = require('fs');
 // All Twitch content (players, chat, login) shares this persistent session,
 // so one login applies everywhere and Turbo / subscriptions remove the ads.
 const PARTITION = 'persist:twitch';
-const CHROME_UA = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome} Safari/537.36`;
+// Same user agent as real Chrome on Windows. Chrome only sends its major
+// version ("Chrome/152.0.0.0"); a full version number gives the app away as
+// a non-Chrome browser, and Twitch's bot check then rejects integrity-checked
+// actions such as claiming the channel points bonus chest.
+const CHROME_UA = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome.split('.')[0]}.0.0.0 Safari/537.36`;
 const GQL_URL = 'https://gql.twitch.tv/gql';
 const GQL_CLIENT_ID = 'kimne78kx3ncx6brgo4mv6wki5h1ko'; // Twitch web client
 
