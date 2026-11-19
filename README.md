@@ -90,7 +90,12 @@ het openen "Windows heeft uw pc beschermd". Klik op **Meer info** en daarna op
 ### Na een wijziging opnieuw bouwen
 
 1. Verhoog `version` in `package.json` (bijv. 1.0.2), zodat de nieuwe MSI
-   netjes over de oude versie heen installeert.
+   netjes over de oude versie heen installeert. Let op: Windows kijkt alleen
+   naar `MAJOR.MINOR.PATCH`, dus `1.4.0-beta.2` en `1.4.0` tellen als
+   dezelfde versie en dan worden niet alle bestanden vervangen (fout 2753 bij
+   *Voltooien*). Zorg daarom dat elke release, ook elke bèta, in
+   `MAJOR.MINOR.PATCH` hoger is dan de vorige (bijv. na `1.4.0-beta.2` de
+   stabiele versie als `1.4.1` uitbrengen).
 2. Beschrijf de wijzigingen in [CHANGELOG.md](CHANGELOG.md) onder een nieuw
    kopje met het versienummer en de datum.
 3. Bouw de MSI:

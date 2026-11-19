@@ -6,6 +6,16 @@ versienummers volgens [Semantic Versioning](https://semver.org/lang/nl/):
 `MAJOR.MINOR.PATCH`, waarbij PATCH voor fixes is, MINOR voor nieuwe functies
 en MAJOR voor grote, niet-compatibele wijzigingen.
 
+## [1.3.1] - 2026-11-19
+
+### Opgelost
+- **Installatie van 1.3.0 over een bèta gaf fout 2753** bij het klikken op
+  *Voltooien* met "Run Twitch MultiView" aangevinkt. Windows ziet
+  `1.3.0-beta.3` en `1.3.0` allebei als versie 1.3.0.0, liet daardoor het
+  oude programmabestand staan en kon het daarna niet starten. 1.3.1 heeft een
+  nieuw versienummer, zodat alle bestanden worden vervangen. Inhoudelijk
+  gelijk aan 1.3.0 (inclusief de fix voor de bonuskist).
+
 ## [1.3.0] - 2026-11-19
 
 Stabiele versie van 1.3.0: alles uit de drie bèta's, plus een fix voor het
