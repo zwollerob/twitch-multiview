@@ -45,6 +45,7 @@ const PROFILE_DIR = arg('profile');
 const CAPTURE_FILE = arg('capture');
 const CAPTURE_DELAY = Number(arg('capture-delay') || 15000);
 const CAPTURE_SCRIPT = arg('capture-script'); // JS run in the UI before capturing
+const DEBUG_LOG = arg('debug-log') ? require('./debug-log')(path.resolve(arg('debug-log'))) : null;
 
 if (PROFILE_DIR) app.setPath('userData', path.resolve(PROFILE_DIR));
 
@@ -429,6 +430,7 @@ function hookGuest(contents) {
       else if (cur.hostname === 'player.twitch.tv') allowed = isPlayer;
       else allowed = isChat;
     }
+    if (DEBUG_LOG) DEBUG_LOG.write('NAV', allowed ? 'allow' : 'BLOCK', 'mainFrame=' + event.isMainFrame, url.slice(0, 200));
     if (!allowed) {
       event.preventDefault();
       openInBrowser(url);
@@ -585,7 +587,10 @@ app.whenReady().then(() => {
   });
 
   app.on('web-contents-created', (e, contents) => {
-    if (contents.getType() === 'webview') hookGuest(contents);
+    if (contents.getType() === 'webview') {
+      hookGuest(contents);
+      if (DEBUG_LOG) DEBUG_LOG.watch(contents);
+    }
   });
 
   // Every IPC call must come from our own UI page.
