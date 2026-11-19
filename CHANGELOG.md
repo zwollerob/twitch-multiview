@@ -6,7 +6,20 @@ versienummers volgens [Semantic Versioning](https://semver.org/lang/nl/):
 `MAJOR.MINOR.PATCH`, waarbij PATCH voor fixes is, MINOR voor nieuwe functies
 en MAJOR voor grote, niet-compatibele wijzigingen.
 
-## [Unreleased]
+## [1.3.0] - 2026-11-19
+
+Stabiele versie van 1.3.0: alles uit de drie bèta's, plus een fix voor het
+claimen van kanaalpunten. Vervangt 1.2.0 als stabiele versie.
+
+### Toegevoegd (uit de bèta's)
+- **Op tv tonen (bèta-functie)** in het accountmenu: cast de hele app naar
+  een Chromecast, Nvidia Shield of Google TV, of zet hem volledig scherm op
+  een ander scherm. Zie [1.3.0-beta.1](#130-beta1---2026-10-05-bèta).
+- **Lurken** (`K`): wisselt automatisch naar een willekeurige live stream,
+  met instelbare wisseltijd. Zie [1.3.0-beta.2](#130-beta2---2026-10-05-bèta).
+- **Vaste videokwaliteit:** de uitgelichte stream speelt tot en met 1080p, de
+  kleine streams tot en met 720p. Zie
+  [1.3.0-beta.3](#130-beta3---2026-10-07-bèta).
 
 ### Opgelost
 - **Bonuskist bij kanaalpunten claimen gaf "Error claiming bonus".** Twitch
