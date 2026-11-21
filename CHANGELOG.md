@@ -6,7 +6,7 @@ versienummers volgens [Semantic Versioning](https://semver.org/lang/nl/):
 `MAJOR.MINOR.PATCH`, waarbij PATCH voor fixes is, MINOR voor nieuwe functies
 en MAJOR voor grote, niet-compatibele wijzigingen.
 
-## [Unreleased]
+## [1.4.0-beta.1] - 2026-11-21 (bèta)
 
 ### Toegevoegd
 - **Bonuskist automatisch claimen** (accountmenu, staat standaard aan): de
@@ -267,6 +267,7 @@ Eerste versie.
   op het bureaublad en in het Startmenu.
 - "Made with AI · Zw_038_olle" en versienummer in het sneltoetsenvenster.
 
+[1.4.0-beta.1]: https://github.com/zwollerob/twitch-multiview/compare/v1.3.1...v1.4.0-beta.1
 [1.3.0-beta.3]: https://github.com/zwollerob/twitch-multiview/compare/v1.3.0-beta.2...v1.3.0-beta.3
 [1.3.0-beta.2]: https://github.com/zwollerob/twitch-multiview/compare/v1.3.0-beta.1...v1.3.0-beta.2
 [1.3.0-beta.1]: https://github.com/zwollerob/twitch-multiview/compare/v1.2.0...v1.3.0-beta.1
