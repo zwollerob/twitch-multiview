@@ -57,6 +57,33 @@ const CHAT_JS = `(() => {
   } catch (e) {}
 })();`;
 
+// Clicks the channel points bonus chest ("Claim Bonus") as soon as it shows
+// up in a popout chat. It is the same button you would click yourself, so
+// Twitch's own page does the claim (including its integrity check).
+// window.__tmvClaimOff pauses it when the setting is turned off.
+const CLAIM_JS = `(() => {
+  if (window.__tmvClaim) return;
+  window.__tmvClaim = true;
+  let last = 0;
+  let queued = false;
+  const check = () => {
+    queued = false;
+    if (window.__tmvClaimOff || Date.now() - last < 5000) return;
+    const icon = document.querySelector('.claimable-bonus__icon');
+    const btn = (icon && icon.closest('button'))
+      || document.querySelector('[data-test-selector="community-points-summary"] button[aria-label*="bonus" i]');
+    if (!btn || btn.disabled) return;
+    last = Date.now();
+    btn.click();
+    console.log('TMV:claimed');
+  };
+  new MutationObserver(() => {
+    if (!queued) { queued = true; setTimeout(check, 400); }
+  }).observe(document.documentElement, { childList: true, subtree: true });
+  setInterval(check, 5000);
+  check();
+})();`;
+
 const AUDIO_MODES = ['featured', 'all', 'none'];
 const AUDIO_LABELS = { featured: 'Geluid: uitgelicht', all: 'Geluid: alle', none: 'Geluid: uit' };
 const LAYOUTS = ['featured', 'grid', 'solo'];
@@ -73,6 +100,7 @@ const state = {
   lurkDelay: 60, // seconds
   lurkSolo: true, // hide the small streams while lurking
   lurkReturn: null, // layout to go back to when lurking stops
+  autoClaim: true, // claim the channel points bonus chest automatically
 };
 
 const tiles = new Map(); // login -> tile
@@ -635,11 +663,107 @@ function updateChat() {
     chatWv = document.createElement('webview');
     chatWv.setAttribute('partition', PARTITION);
     chatWv.setAttribute('src', url);
-    chatWv.addEventListener('dom-ready', () => chatWv.executeJavaScript(CHAT_JS).catch(() => {}));
+    chatWv.addEventListener('dom-ready', () => {
+      chatWv.executeJavaScript(CHAT_JS).catch(() => {});
+      chatWv.executeJavaScript(`window.__tmvClaimOff = ${!state.autoClaim};${CLAIM_JS}`).catch(() => {});
+    });
+    chatWv.addEventListener('console-message', e => { if ((e.message || '') === 'TMV:claimed') onClaimed(chatChannel); });
     $('#chatHost').appendChild(chatWv);
   } else {
-    chatWv.loadURL(url);
+    chatWv.loadURL(url).catch(() => {});
   }
+}
+
+// ---------------------------------------------------------------------------
+// Bonus chest for all streams
+// ---------------------------------------------------------------------------
+// The chest only shows up in a channel's chat, and the chat panel only shows
+// the featured stream. A hidden popout chat therefore visits every other open
+// stream in turn, clicks the chest if it is there, and then rests for a few
+// minutes. (Twitch offers a new chest about every 15 minutes of watching and
+// keeps it until it is claimed, so nothing is missed.)
+const CLAIM_START_MS = 20 * 1000; // let the streams start first
+const CLAIM_VISIT_MS = 15 * 1000; // time on each chat to find the chest
+const CLAIM_REST_MS = 5 * 60 * 1000; // pause between two rounds
+let claimWv = null;
+let claimChannel = null;
+let claimQueue = [];
+let claimTimer = null;
+let claimCount = 0;
+
+const chatOpen = () => state.chat && Boolean(state.featured);
+const claimWanted = () => state.autoClaim && Boolean(user) && state.channels.length > 0;
+
+function onClaimed(ch) {
+  claimCount++;
+  if (user && !accountMenu.hidden) toggleAccountMenu(true); // update the counter
+  // The hidden chat can move on to the next stream once the claim went out.
+  if (claimWv && ch === claimChannel) {
+    clearTimeout(claimTimer);
+    claimTimer = setTimeout(claimStep, 3000);
+  }
+}
+
+function stopClaimer() {
+  clearTimeout(claimTimer);
+  claimTimer = null;
+  claimQueue = [];
+  claimChannel = null;
+  if (claimWv) claimWv.remove();
+  claimWv = null;
+}
+
+function updateClaimer() {
+  if (!claimWanted()) stopClaimer();
+  else if (!claimTimer) claimTimer = setTimeout(claimRound, CLAIM_START_MS);
+}
+
+function claimRound() {
+  claimQueue = [...state.channels];
+  claimStep();
+}
+
+function claimStep() {
+  clearTimeout(claimTimer);
+  claimTimer = null;
+  if (!claimWanted()) return stopClaimer();
+  let ch = null;
+  while (claimQueue.length && !ch) {
+    const c = claimQueue.shift();
+    // Skip removed streams and the one the chat panel already covers.
+    if (state.channels.includes(c) && !(chatOpen() && c === chatChannel)) ch = c;
+  }
+  if (!ch) {
+    // Round done: unload the hidden chat until the next round.
+    if (claimWv) claimWv.remove();
+    claimWv = null;
+    claimChannel = null;
+    claimTimer = setTimeout(claimRound, CLAIM_REST_MS);
+    return;
+  }
+  claimChannel = ch;
+  const url = `https://www.twitch.tv/popout/${encodeURIComponent(ch)}/chat?popout=`;
+  if (!claimWv) {
+    claimWv = document.createElement('webview');
+    claimWv.className = 'claimer';
+    claimWv.setAttribute('partition', PARTITION);
+    claimWv.setAttribute('webpreferences', 'backgroundThrottling=false');
+    claimWv.setAttribute('src', url);
+    const wv = claimWv;
+    wv.addEventListener('dom-ready', () => wv.executeJavaScript(CLAIM_JS).catch(() => {}));
+    wv.addEventListener('console-message', e => { if ((e.message || '') === 'TMV:claimed') onClaimed(claimChannel); });
+    document.body.appendChild(wv);
+  } else {
+    claimWv.loadURL(url).catch(() => {});
+  }
+  claimTimer = setTimeout(claimStep, CLAIM_VISIT_MS);
+}
+
+function setAutoClaim(on) {
+  state.autoClaim = on;
+  if (chatWv) chatWv.executeJavaScript(`window.__tmvClaimOff = ${!on};`).catch(() => {});
+  changed();
+  toast(on ? 'Bonuskist wordt automatisch geclaimd in alle streams' : 'Bonuskist automatisch claimen staat uit');
 }
 
 // ---------------------------------------------------------------------------
@@ -690,6 +814,7 @@ function changed() {
   layout();
   updateChat();
   updateControls();
+  updateClaimer();
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => api.saveConfig({ ...state }), 300);
 }
@@ -1049,15 +1174,19 @@ function renderAccount() {
   empty.innerHTML = `<div>Ingelogd als <b>${esc(name)}</b> ${badge}</div>`;
 }
 
-function toggleAccountMenu() {
-  if (!accountMenu.hidden) return closePopovers();
-  closePopovers();
+function toggleAccountMenu(refresh = false) {
+  if (!refresh && !accountMenu.hidden) return closePopovers();
+  if (!refresh) closePopovers();
   accountMenu.innerHTML = `
     <div class="hint">Ingelogd als <b>${esc(user.displayName || user.login)}</b></div>
     <button class="item cast-item" data-act="cast">${ICONS.cast}<span>Op tv tonen</span><span class="beta-tag">Beta</span>${castState.status === 'casting' ? `<span class="cast-tag">● ${esc(castState.device ? castState.device.name : 'tv')}</span>` : ''}</button>
+    <button class="item claim-item" data-act="claim" title="Klikt de bonuskist met kanaalpunten automatisch aan, in alle open streams">
+      <span class="meta"><div>Bonuskist automatisch claimen</div>${state.autoClaim && claimCount ? `<div class="sub">${claimCount}× geclaimd sinds het starten</div>` : ''}</span>
+      <span class="check">${state.autoClaim ? '✓' : ''}</span></button>
     <button class="item" data-act="reload">Alle streams herladen</button>
     <button class="item risk-item" data-act="limit">${ICONS.warn}<span>Max. aantal streams: <b>${state.maxStreams}</b></span>${state.maxStreams > DEFAULT_MAX ? '<span class="risk-tag">eigen risico</span>' : ''}</button>
     <button class="item" data-act="logout">Uitloggen</button>`;
+  accountMenu.querySelector('[data-act=claim]').addEventListener('click', () => { setAutoClaim(!state.autoClaim); toggleAccountMenu(true); });
   accountMenu.querySelector('[data-act=reload]').addEventListener('click', () => { closePopovers(); reloadAll(); });
   accountMenu.querySelector('[data-act=limit]').addEventListener('click', () => { closePopovers(); openLimitDialog(); });
   accountMenu.querySelector('[data-act=cast]').addEventListener('click', () => { closePopovers(); openCastDialog(); });
@@ -1279,6 +1408,7 @@ async function refreshUser() {
     user = null;
   }
   renderAccount();
+  updateClaimer();
 }
 
 api.onAuthChanged(async () => {
@@ -1384,6 +1514,7 @@ function toast(text) {
   if (!LURK_DELAYS.includes(state.lurkDelay)) state.lurkDelay = 60;
   state.lurk = state.lurk === true;
   state.lurkSolo = state.lurkSolo !== false;
+  state.autoClaim = state.autoClaim !== false;
   if (!LAYOUTS.includes(state.lurkReturn)) state.lurkReturn = null;
 
   fullscreen = await api.isFullscreen();
