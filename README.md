@@ -41,6 +41,10 @@ Daarna staat bij je naam een **Turbo**-badge. Je login blijft bewaard.
 - **Lurken** (`K`): wisselt automatisch naar een willekeurige live stream uit
   je overzicht, elke 15 seconden tot 10 minuten. Standaard verbergt hij de
   kleine streams, zodat één stream het hele venster vult.
+- **Bonuskist automatisch claimen** (in het accountmenu, staat standaard
+  aan): de kist met kanaalpunten wordt in alle open streams vanzelf
+  aangeklikt, ook als de chat dicht is. Een onzichtbare chat loopt daarvoor
+  om de paar minuten alle streams langs. Werkt alleen als je bent ingelogd.
 - **Op tv tonen** (bèta, in het accountmenu): cast de hele app naar een
   Chromecast, Nvidia Shield of Google TV, of zet hem volledig scherm op een
   ander scherm. De eerste keer vraagt Windows Firewall om toestemming: kies

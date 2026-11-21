@@ -325,6 +325,10 @@ body.has-streams #empty { display: none; }
 .popover.suggest .item.added { opacity: .6; }
 .popover .item .noimg { width: 32px; height: 32px; border-radius: 50%; background: var(--panel-2); flex-shrink: 0; }
 .popover .hint .btn { margin-top: 8px; }
+.popover .claim-item .check { width: 14px; color: var(--accent-hi); text-align: center; }
+
+/* Hidden popout chat that claims the bonus chest of the other streams. */
+webview.claimer { position: fixed; left: -10000px; top: 0; width: 340px; height: 600px; pointer-events: none; }
 
 .modal {
   position: fixed; inset: 0; z-index: 60;

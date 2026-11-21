@@ -6,6 +6,17 @@ versienummers volgens [Semantic Versioning](https://semver.org/lang/nl/):
 `MAJOR.MINOR.PATCH`, waarbij PATCH voor fixes is, MINOR voor nieuwe functies
 en MAJOR voor grote, niet-compatibele wijzigingen.
 
+## [Unreleased]
+
+### Toegevoegd
+- **Bonuskist automatisch claimen** (accountmenu, staat standaard aan): de
+  bonuskist met kanaalpunten wordt vanzelf aangeklikt, in alle open streams.
+  In de chat van de uitgelichte stream gebeurt dat meteen; de andere streams
+  loopt een onzichtbare chat om de vijf minuten langs (zo'n 15 seconden per
+  stream). Twitch bewaart de kist tot hij geclaimd is, dus er gaat niets
+  verloren. Het menu laat zien hoe vaak er sinds het starten is geclaimd.
+  Alleen als je bent ingelogd.
+
 ## [1.3.1] - 2026-11-19
 
 ### Opgelost
